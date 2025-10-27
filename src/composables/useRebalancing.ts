@@ -159,12 +159,6 @@ export function useRebalancing() {
             errors.push('No target allocations defined');
         }
 
-        if (!isValidTargetAllocation.value) {
-            errors.push(
-                `Target allocations must sum to 100% (currently ${totalTargetPercent.value.toFixed(2)}%)`,
-            );
-        }
-
         const negativeTargets = state.targets.filter(t => t.targetPercent < 0);
         if (negativeTargets.length > 0) {
             errors.push('Target percentages cannot be negative');

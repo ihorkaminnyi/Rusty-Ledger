@@ -56,7 +56,13 @@ const getPLClass = (value: number) => {
 
         <TabView class="full-width-tabs">
 
-          <TabPanel value="details" header="Portfolio Details">
+          <TabPanel value="details">
+            <template #header>
+              <span class="flex align-items-center gap-2">
+                <i class="pi pi-briefcase"></i>
+                <span>Portfolio Positions</span>
+              </span>
+            </template>
             <DataTable
                 :value="tableRows"
                 dataKey="symbol"
@@ -66,6 +72,7 @@ const getPLClass = (value: number) => {
                 removableSort
                 scrollable
                 scrollDirection="both"
+                scrollHeight="253px"
                 class="text-sm"
             >
               <Column
@@ -113,7 +120,13 @@ const getPLClass = (value: number) => {
             </DataTable>
           </TabPanel>
 
-          <TabPanel value="rebalancing" header="Rebalancing Calculator">
+          <TabPanel value="rebalancing">
+            <template #header>
+              <span class="flex align-items-center gap-2">
+               <i class="pi pi-calculator"></i>
+                <span>Rebalancing Calculator</span>
+              </span>
+            </template>
             <RebalancingCalculator />
           </TabPanel>
         </TabView>

@@ -8,7 +8,6 @@ import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Tag from 'primevue/tag';
-import ProgressBar from 'primevue/progressbar';
 import { useRebalancing } from '../../composables/useRebalancing';
 import { useAppStore } from '../../stores/appStore';
 
@@ -74,13 +73,6 @@ const enhancedTargets = computed(() => {
 const validationErrors = computed(() => validateTargets());
 const hasValidationErrors = computed(() => validationErrors.value.length > 0);
 
-const getProgressBarColor = computed(() => {
-  const total = totalTargetPercent.value;
-  if (Math.abs(total - 100) < 0.01) return 'success';
-  if (total > 100) return 'danger';
-  return 'info';
-});
-
 const handleTargetUpdate = (symbol: string, value: number | null) => {
   const targetValue = value || 0;
   updateTarget(symbol, Math.max(0, Math.min(100, targetValue)));
@@ -113,11 +105,14 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
   <div class="flex flex-column gap-4">
     <Card class="surface-0 border-1 surface-border border-round-xl shadow-1">
       <template #header>
-        <div class="flex justify-content-between align-items-center p-4 pb-0 mb-3">
-          <h3 class="text-xl font-semibold text-900 m-0 flex align-items-center gap-2">
-            <i class="pi pi-calculator text-primary"></i>
-            Rebalancing Calculator
-          </h3>
+        <div class="flex justify-content-between align-items-center px-3 pt-1 pb-0">
+          <div class="flex align-items-center gap-3">
+            <h5 class="text-lg font-semibold text-700 m-0">Target Allocation</h5>
+            <div
+                :class="`text-lg font-semibold px-3 py-1 border-round ${isValidTargetAllocation ? 'bg-green-50 text-green-600 border-1 border-green-200' : 'bg-red-50 text-red-600 border-1 border-red-200'}`">
+              {{ totalTargetPercent.toFixed(2) }}%
+            </div>
+          </div>
           <div class="flex gap-2">
             <Button
                 label="Reset to Current"
@@ -132,32 +127,8 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
       </template>
 
       <template #content>
-        <div class="flex flex-column gap-4">
-          <div class="flex justify-content-between align-items-center">
-            <h4 class="text-lg font-semibold text-700 m-0">Target Allocation</h4>
-            <div class="flex align-items-center gap-3">
-              <div
-                  :class="`text-lg font-semibold px-3 py-2 border-round ${isValidTargetAllocation ? 'bg-green-50 text-green-600 border-1 border-green-200' : 'bg-red-50 text-red-600 border-1 border-red-200'}`">
-                Total: {{ totalTargetPercent.toFixed(2) }}%
-              </div>
-            </div>
-          </div>
-
-          <!-- Progress bar showing total percentage -->
-          <div class="flex flex-column gap-2">
-            <ProgressBar
-                :value="totalTargetPercent"
-                :severity="getProgressBarColor"
-                :showValue="false"
-                class="h-3 border-round"
-            />
-            <div class="flex justify-content-between text-xs text-600">
-              <span>0%</span>
-              <span class="font-semibold text-700">100%</span>
-            </div>
-          </div>
-
-          <div v-if="hasValidationErrors" class="flex flex-column gap-2">
+        <div class="flex flex-column">
+          <div v-if="hasValidationErrors" class="flex flex-column">
             <Message
                 v-for="error in validationErrors"
                 :key="error"
@@ -171,7 +142,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
 
           <DataTable
               :value="enhancedTargets"
-              class="targets-table"
+              class="targets-table text-sm"
               :scrollable="true"
               scrollHeight="400px"
               v-if="enhancedTargets.length > 0"
@@ -362,69 +333,6 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
 </template>
 
 <style scoped>
-/* Custom table styling */
-:deep(.p-datatable-thead > tr > th) {
-  background: #f8fafc;
-  color: #374151;
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.75rem;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-:deep(.p-datatable-tbody > tr > td) {
-  padding: 0.75rem;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-}
-
-:deep(.p-datatable-tbody > tr:hover) {
-  background: #f8fafc;
-}
-
-/* Cell styling */
-.symbol-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.symbol-main {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 0.875rem;
-}
-
-.symbol-description {
-  font-size: 0.75rem;
-  color: #64748b;
-  line-height: 1.2;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.current-percent,
-.current-value,
-.target-percent {
-  font-weight: 500;
-  color: #374151;
-  text-align: right;
-}
-
-.current-value {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.target-input {
-  width: 100%;
-}
-
-/* Tags */
 .difference-tag,
 .action-tag {
   font-weight: 600;
@@ -436,37 +344,11 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
   gap: 0.25rem;
 }
 
-.difference-icon,
-.action-icon {
-  font-size: 0.625rem;
+.action-tag {
+  text-transform: capitalize;
 }
 
-/* Amount and shares cells */
-.amount-cell,
-.shares-cell {
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-align: right;
-}
-
-.amount-cell.success,
-.shares-cell.success {
-  color: #16a34a;
-}
-
-.amount-cell.danger,
-.shares-cell.danger {
-  color: #dc2626;
-}
-
-.instructions-cell {
-  font-size: 0.875rem;
-  color: #374151;
-  line-height: 1.4;
-}
-
-/* Animation */
-.flex.flex-column.gap-4 {
+.flex {
   animation: fadeIn 0.5s ease-in-out;
 }
 
@@ -478,56 +360,6 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  .flex.justify-content-between.align-items-center {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .symbol-description {
-    max-width: 150px;
-  }
-}
-
-@media (max-width: 480px) {
-  .text-xl {
-    font-size: 1.125rem;
-  }
-
-  .symbol-description {
-    max-width: 120px;
-  }
-
-  .difference-tag,
-  .action-tag {
-    font-size: 0.625rem;
-    padding: 0.25rem 0.5rem;
-  }
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  .flex.flex-column.gap-4 {
-    animation: none;
-  }
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  .border-1 {
-    border-width: 2px;
-  }
-
-  .difference-tag,
-  .action-tag {
-    border-width: 2px;
   }
 }
 </style>
