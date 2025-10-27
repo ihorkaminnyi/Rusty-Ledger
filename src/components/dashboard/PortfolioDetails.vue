@@ -129,34 +129,5 @@ const getPLClass = (value: number) => {
 </template>
 
 <style scoped>
-.portfolio-table {
-  border-spacing: 0;
-  border-collapse: separate;
-}
-
-.portfolio-table th {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.portfolio-table tbody tr:hover {
-  background-color: rgba(148, 163, 184, 0.08);
-}
-
-:deep(.full-width-tabs .p-tabview-nav) {
-  display: flex;
-  width: 100%;
-}
-
-:deep(.full-width-tabs .p-tabview-nav li) {
-  flex: 1 1 0;
-}
-
-:deep(.full-width-tabs .p-tabview-nav li .p-tabview-nav-link) {
-  width: 100%;
-  justify-content: center;
-}
 
 </style>
