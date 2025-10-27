@@ -1,13 +1,12 @@
 <template>
   <header class="app-header surface-0 border-bottom-1 surface-border shadow-1 sticky top-0 z-5">
-    <div class="max-w-screen-xl mx-auto px-4 py-3 flex align-items-center justify-content-between gap-4">
-      <!-- Left side: Logo and title -->
-      <div class="flex align-items-center gap-4 flex-1">
+    <div class="max-w-screen-xl mx-auto px-4 py-2 flex align-items-center justify-content-between gap-4">
+      <div class="flex align-items-center gap-4 flex-2">
         <div class="flex align-items-center gap-3">
           <i class="pi pi-chart-pie text-primary text-2xl"></i>
           <h1 class="text-2xl font-bold text-900 m-0">Rusty Ledger</h1>
         </div>
-        <div class="flex flex-column gap-1" v-if="showAccountMeta">
+        <div class="flex flex-column" v-if="showAccountMeta">
           <span class="text-sm font-semibold text-600" v-if="accountName">{{ accountName }}</span>
           <span class="text-xs text-500" v-if="statementPeriod">
             Period: {{ statementPeriod }}
