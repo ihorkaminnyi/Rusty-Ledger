@@ -144,7 +144,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
               :value="enhancedTargets"
               class="targets-table text-sm"
               :scrollable="true"
-              scrollHeight="400px"
+              scrollHeight="253px"
               v-if="enhancedTargets.length > 0"
           >
             <Column field="symbol" header="Asset" :style="{ minWidth: '5rem' }" frozen>
@@ -156,7 +156,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
               </template>
             </Column>
 
-            <Column field="currentPercent" header="Current %" :style="{ minWidth: '8rem' }">
+            <Column field="currentPercent" header="Current %" :style="{ minWidth: '6.5rem' }">
               <template #body="{ data }">
                 <div class="current-percent">
                   {{ formatPercentage(data.currentPercent) }}
@@ -164,7 +164,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
               </template>
             </Column>
 
-            <Column field="targetPercent" header="Target %" :style="{ minWidth: '10px' }">
+            <Column field="targetPercent" header="Target %" :style="{ width: '6.5rem', minWidth: '6.5rem' }">
               <template #body="{ data }">
                 <InputNumber
                     :modelValue="data.targetPercent"
@@ -176,7 +176,8 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
                     :max="100"
                     suffix="%"
                     :disabled="rebalancingState.isCalculating"
-                    class="target-input"
+                    class="target-input p-inputnumber-sm w-full"
+                    inputClass="p-inputtext-sm w-full"
                     :class="{ 'p-invalid': !isValidTargetAllocation }"
                 />
               </template>
@@ -222,8 +223,8 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
                 @click="handleCalculateRebalancing"
                 :disabled="!canCalculate"
                 :loading="rebalancingState.isCalculating"
-                size="large"
-                class="min-w-max"
+                size="small"
+                class="p-button-sm px-3"
             />
           </div>
         </div>
@@ -321,7 +322,6 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
           </DataTable>
         </div>
 
-        <!-- No actions needed -->
         <div v-else class="text-center py-6 text-600">
           <i class="pi pi-check-circle text-4xl text-green-500 mb-3"></i>
           <h4 class="text-lg font-semibold text-500 mb-2">Portfolio is already balanced</h4>
