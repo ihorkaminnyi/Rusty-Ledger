@@ -71,6 +71,11 @@ export function useFileUpload() {
     const handleDrop = async (event: DragEvent) => {
         isDragging.value = false;
 
+        if (appStore.isLoading) {
+            clearDataTransfer(event);
+            return;
+        }
+
         if (isTauriEnv && tauriUnsubscribers.length > 0) {
             clearDataTransfer(event);
             return;
@@ -109,6 +114,10 @@ export function useFileUpload() {
                         return;
                     case 'drop': {
                         isDragging.value = false;
+                        if (appStore.isLoading) {
+                            return;
+                        }
+
                         const filePath = payload.paths?.[0];
                         if (!filePath) {
                             return;

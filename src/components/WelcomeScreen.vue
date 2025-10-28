@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
+
 import { useFileUpload } from '../composables/useFileUpload.ts';
+import { useAppStore } from '../stores/appStore.ts';
+import Skeleton from 'primevue/skeleton';
 
 interface FeatureHighlight {
   key: string;
@@ -42,6 +46,15 @@ const {
   selectFile,
 } = useFileUpload();
 
+const appStore = useAppStore();
+const { isLoading } = storeToRefs(appStore);
+
+const handleUploadClick = () => {
+  if (!isLoading.value) {
+    void selectFile();
+  }
+};
+
 </script>
 
 <template>
@@ -83,20 +96,31 @@ const {
       <div class="w-full max-w-30rem mb-6">
         <div
             class="upload-zone surface-0 border-2 border-dashed border-300 border-round-xl p-4 text-center transition-all transition-duration-300 cursor-pointer hover:border-primary hover:bg-primary-25"
-            :class="{ 'is-dragging': isDragging }"
+            :class="{
+              'is-dragging': isDragging,
+              'is-loading': isLoading,
+            }"
             @dragenter.prevent="handleDragEnter"
             @dragover.prevent="handleDragOver"
             @dragleave.prevent="handleDragLeave"
             @drop.prevent="handleDrop"
-            @click="selectFile"
+            @click="handleUploadClick"
+            :aria-busy="isLoading"
         >
-          <div class="flex flex-column align-items-center gap-5">
-            <i class="pi pi-cloud-upload text-7xl text-400"></i>
-            <h3 class="text-xl font-semibold text-900 m-0">Перетягніть ваш CSV-звіт сюди</h3>
-            <p class="text-base text-600 m-0">
-              <span class="hidden md:inline">...або натисніть щоб обрати файл</span>
-            </p>
-          </div>
+          <Transition name="fade-in" mode="out-in">
+            <div v-if="!isLoading" key="upload-content" class="flex flex-column align-items-center gap-5">
+              <i class="pi pi-cloud-upload text-7xl text-400"></i>
+              <h3 class="text-xl font-semibold text-900 m-0">Перетягніть ваш CSV-звіт сюди</h3>
+              <p class="text-base text-600 m-0">
+                <span class="hidden md:inline">...або натисніть щоб обрати файл</span>
+              </p>
+            </div>
+            <div v-else key="upload-skeleton" class="flex flex-column align-items-center gap-4 w-full">
+              <Skeleton shape="circle" size="5rem" animation="wave" />
+              <Skeleton width="80%" height="1.5rem" animation="wave" />
+              <Skeleton width="60%" height="1rem" animation="wave" />
+            </div>
+          </Transition>
         </div>
       </div>
     </Transition>
@@ -123,5 +147,10 @@ const {
 .upload-zone.is-dragging {
   border-color: var(--primary-color, #6366f1);
   background-color: rgba(99, 102, 241, 0.08);
+}
+.upload-zone.is-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.85;
 }
 </style>
