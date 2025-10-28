@@ -24,8 +24,8 @@ const handleClick = async () => {
 
 <template>
   <div class="min-h-screen flex flex-column justify-content-start align-items-center p-4 bg-gray-50">
-    <div class="text-center mb-3">
-      <div class="flex align-items-center justify-content-center gap-3 mb-0">
+    <div class="text-center mb-4">
+      <div class="flex align-items-center justify-content-center gap-3 mb-1">
         <i class="pi pi-chart-pie text-6xl text-primary"></i>
         <h1 class="text-5xl font-bold text-900 mb-2">Rusty Ledger</h1>
       </div>
@@ -34,7 +34,7 @@ const handleClick = async () => {
       </p>
     </div>
 
-    <div class="w-full max-w-4xl mb-3">
+    <div class="w-full max-w-4xl mb-4">
       <div class="grid align-content-end">
         <div class="col-12 md:col-4">
           <div class="text-center p-1">
@@ -66,7 +66,7 @@ const handleClick = async () => {
       </div>
     </div>
 
-    <div class="w-full max-w-30rem mb-4">
+    <div class="w-full max-w-30rem mb-6">
       <div
           class="upload-zone surface-0 border-2 border-dashed border-300 border-round-xl p-4 text-center transition-all transition-duration-300 cursor-pointer hover:border-primary hover:bg-primary-25"
           @dragenter.prevent="handleDragEnter"
@@ -75,7 +75,7 @@ const handleClick = async () => {
           @drop.prevent="handleDrop"
           @click="handleClick"
       >
-        <div class="flex flex-column align-items-center gap-4">
+        <div class="flex flex-column align-items-center gap-5">
           <i class="pi pi-cloud-upload text-7xl text-400"></i>
           <h3 class="text-xl font-semibold text-900 m-0">Перетягніть ваш CSV-звіт сюди</h3>
           <p class="text-base text-600 m-0">

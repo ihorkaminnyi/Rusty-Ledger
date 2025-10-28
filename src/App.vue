@@ -14,7 +14,7 @@ const showWelcomeScreen = computed(() => !hasPortfolio.value);
 
 <template>
   <main class="min-h-screen w-full">
-    <AppHeader />
+    <AppHeader v-if="!showWelcomeScreen" />
     <WelcomeScreen v-if="showWelcomeScreen" key="welcome" />
     <DashboardView v-else />
   </main>
