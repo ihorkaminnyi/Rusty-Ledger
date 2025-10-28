@@ -14,8 +14,7 @@
       {
         "title": "rusty-ledger",
         "width": 1366,
-        "height": 768,
-        "dragDropEnabled": false
+        "height": 768
       }
     ],
     "security": {
