@@ -73,7 +73,7 @@ const getPLClass = (value: number) => {
                 scrollable
                 scrollDirection="both"
                 scrollHeight="25.4rem"
-                class="text-sm"
+                class="portfolio-table text-sm"
             >
               <Column
                   field="symbol"
@@ -142,5 +142,18 @@ const getPLClass = (value: number) => {
 </template>
 
 <style scoped>
+.portfolio-table {
+  animation: fadeIn 0.5s ease-in-out;
+}
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 </style>

@@ -6,17 +6,32 @@ import PortfolioDetails from './PortfolioDetails.vue';
 
 <template>
   <div class="p-4 min-h-screen flex flex-column">
-    <PortfolioOverview />
-    <div class="grid align-items-stretch flex-1">
-      <div class="col-12 lg:col-6 flex flex-column h-full">
+    <Transition name="fade-up" appear>
+      <PortfolioOverview />
+    </Transition>
+
+    <TransitionGroup
+        name="fade-stagger"
+        tag="div"
+        class="grid align-items-stretch flex-1"
+        appear
+    >
+      <div
+          key="asset-allocation"
+          class="col-12 lg:col-6 flex flex-column h-full"
+          :style="{ '--stagger-index': 0 }"
+      >
         <AssetAllocation class="w-full flex-1" />
       </div>
-      <div class="col-12 lg:col-6 flex flex-column h-full">
+      <div
+          key="portfolio-details"
+          class="col-12 lg:col-6 flex flex-column h-full"
+          :style="{ '--stagger-index': 1 }"
+      >
         <PortfolioDetails class="w-full flex-1" />
       </div>
-    </div>
+    </TransitionGroup>
   </div>
-
 </template>
 
 <style scoped>

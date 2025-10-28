@@ -56,8 +56,8 @@ const plIcon = computed(() => {
 
 <template>
   <div class="w-full mb-2">
-    <div class="grid align-items-stretch">
-      <div class="col-12 md:col-6 lg:col-4">
+    <TransitionGroup name="fade-stagger" tag="div" class="grid align-items-stretch" appear>
+      <div class="col-12 md:col-6 lg:col-4" :style="{ '--stagger-index': 0 }" key="market-value">
         <div
             class="surface-0 border-1 surface-border border-round-lg p-3 transition-all transition-duration-300 hover:shadow-3 hover:-translate-y-1 flex flex-column gap-2">
           <div class="flex align-items-center gap-3">
@@ -73,7 +73,7 @@ const plIcon = computed(() => {
         </div>
       </div>
 
-      <div class="col-12 md:col-6 lg:col-4">
+      <div class="col-12 md:col-6 lg:col-4" :style="{ '--stagger-index': 1 }" key="unrealized-pl">
         <div
             class="surface-0 border-1 surface-border border-round-lg p-3 transition-all transition-duration-300 hover:shadow-3 hover:-translate-y-1 flex flex-column gap-2">
           <div class="flex align-items-center gap-3">
@@ -96,7 +96,7 @@ const plIcon = computed(() => {
         </div>
       </div>
 
-      <div class="col-12 md:col-6 lg:col-4">
+      <div class="col-12 md:col-6 lg:col-4" :style="{ '--stagger-index': 2 }" key="total-positions">
         <div
             class="surface-0 border-1 surface-border border-round-lg p-3 transition-all transition-duration-300 hover:shadow-3 hover:-translate-y-1 flex flex-column gap-2">
           <div class="flex align-items-center gap-3">
@@ -111,6 +111,6 @@ const plIcon = computed(() => {
           </div>
         </div>
       </div>
-    </div>
+    </TransitionGroup>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import WelcomeScreen from "./components/WelcomeScreen.vue";
+import WelcomeScreen from './components/WelcomeScreen.vue';
 import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import DashboardView from './components/dashboard/DashboardView.vue';
@@ -13,11 +13,13 @@ const showWelcomeScreen = computed(() => !hasPortfolio.value);
 </script>
 
 <template>
-  <main class="min-h-screen w-full">
-    <AppHeader v-if="!showWelcomeScreen" />
-    <WelcomeScreen v-if="showWelcomeScreen" key="welcome" />
-    <DashboardView v-else />
-  </main>
+  <Transition name="screen-fade" mode="out-in">
+    <main class="min-h-screen w-full">
+      <AppHeader v-if="!showWelcomeScreen"/>
+      <WelcomeScreen v-if="showWelcomeScreen" key="welcome"/>
+      <DashboardView v-else key="dashboard"/>
+    </main>
+  </Transition>
 </template>
 
 <style>
@@ -42,5 +44,65 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+}
+
+.screen-fade-enter-active,
+.screen-fade-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.screen-fade-enter-from,
+.screen-fade-leave-to {
+  opacity: 0;
+  transform: translateY(1.25rem);
+}
+
+.fade-in-enter-active,
+.fade-in-appear-active,
+.fade-in-leave-active {
+  transition: opacity 0.35s ease;
+}
+.fade-in-enter-from,
+.fade-in-appear-from,
+.fade-in-leave-to {
+  opacity: 0;
+}
+
+.fade-up-enter-active,
+.fade-up-appear-active,
+.fade-up-leave-active {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.fade-up-enter-from,
+.fade-up-appear-from,
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(1.5rem);
+}
+
+.scale-in-enter-active,
+.scale-in-appear-active,
+.scale-in-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.scale-in-enter-from,
+.scale-in-appear-from,
+.scale-in-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.fade-stagger-enter-active,
+.fade-stagger-appear-active {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  transition-delay: calc(var(--stagger-index, 0) * 80ms);
+}
+.fade-stagger-enter-from,
+.fade-stagger-appear-from,
+.fade-stagger-leave-to {
+  opacity: 0;
+  transform: translateY(1.25rem);
+}
+.fade-stagger-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 </style>
