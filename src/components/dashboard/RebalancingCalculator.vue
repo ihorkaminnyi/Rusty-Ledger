@@ -103,8 +103,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
 
 <template>
   <div class="flex flex-column gap-4">
-    <Card class="surface-0 border-1 surface-border border-round-xl shadow-1">
-      <template #header>
+
         <div class="flex justify-content-between align-items-center px-3 pt-1 pb-0">
           <div class="flex align-items-center gap-3">
             <h5 class="text-lg font-semibold text-700 m-0">Target Allocation</h5>
@@ -124,9 +123,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
             />
           </div>
         </div>
-      </template>
 
-      <template #content>
         <div class="flex flex-column">
           <div v-if="hasValidationErrors" class="flex flex-column">
             <Message
@@ -144,7 +141,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
               :value="enhancedTargets"
               class="targets-table text-sm"
               :scrollable="true"
-              scrollHeight="253px"
+              scrollHeight="22rem"
               v-if="enhancedTargets.length > 0"
           >
             <Column field="symbol" header="Asset" :style="{ minWidth: '5rem' }" frozen>
@@ -228,8 +225,6 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
             />
           </div>
         </div>
-      </template>
-    </Card>
 
     <Card v-if="rebalancingState.hasCalculated" class="surface-0 border-1 surface-border border-round-xl shadow-1">
       <template #header>

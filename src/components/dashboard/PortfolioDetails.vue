@@ -50,7 +50,7 @@ const getPLClass = (value: number) => {
 </script>
 
 <template>
-  <Card class="surface-0 border-1 surface-border border-round-2xl shadow-2 overflow-hidden">
+  <Card class="surface-0 border-1 surface-border border-round-xl shadow-2 overflow-hidden">
     <template #content>
       <div v-if="hasPositions" class="overflow-auto border-1 surface-border border-round-xl">
 
@@ -72,7 +72,7 @@ const getPLClass = (value: number) => {
                 removableSort
                 scrollable
                 scrollDirection="both"
-                scrollHeight="253px"
+                scrollHeight="25.4rem"
                 class="text-sm"
             >
               <Column

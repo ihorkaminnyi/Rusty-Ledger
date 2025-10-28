@@ -199,7 +199,7 @@ const formatCurrency = (value: number, currency: string = 'USD'): string => {
 </script>
 
 <template>
-  <Card class="surface-0 border-1 surface-border border-round-xl shadow-2 overflow-hidden">
+  <Card class="pie-card surface-0 border-1 surface-border border-round-xl shadow-2 overflow-hidden flex flex-column justify-content-center">
     <template #header>
       <div class="flex justify-content-between align-items-center p-3 pb-0 mb-2 header-compact">
         <h3 class="text-xl font-semibold text-900 m-0 flex align-items-center gap-2">
@@ -213,7 +213,7 @@ const formatCurrency = (value: number, currency: string = 'USD'): string => {
     </template>
 
     <template #content>
-      <div class="flex flex-column gap-4" v-if="portfolio?.positions.length">
+      <div class="flex flex-column gap-4 h-full" v-if="portfolio?.positions.length">
         <div class="relative h-22rem w-full">
           <Pie
               ref="chartRef"
@@ -233,7 +233,12 @@ const formatCurrency = (value: number, currency: string = 'USD'): string => {
 </template>
 
 <style scoped>
-.relative.h-25rem {
+.pie-card {
+  position: relative;
+  min-height: 38.15rem;
+}
+
+.flex {
   animation: fadeIn 0.5s ease-in-out;
 }
 
@@ -249,55 +254,8 @@ const formatCurrency = (value: number, currency: string = 'USD'): string => {
 }
 
 .header-compact {
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-@media (max-width: 1024px) {
-  .h-25rem {
-    height: 22rem;
-  }
-  
-  .header-compact {
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .h-25rem {
-    height: 19rem;
-  }
-
-  .flex.justify-content-center.gap-4 {
-    flex-direction: column;
-    gap: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .h-25rem {
-    height: 16rem;
-  }
-
-  .text-xl {
-    font-size: 1.125rem;
-  }
-
-  .text-sm {
-    font-size: 0.75rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .relative.h-25rem {
-    animation: none;
-  }
-}
-
-@media (prefers-contrast: high) {
-  .border-1 {
-    border-width: 2px;
-  }
+  position: absolute;
+  top: 0;
+  width: 100%;
 }
 </style>
