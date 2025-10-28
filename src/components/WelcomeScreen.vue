@@ -1,137 +1,14 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import type { UnlistenFn } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-
 import { useFileUpload } from '../composables/useFileUpload.ts';
 
-type FileWithPath = File & { path?: string };
-
-const isDragging = ref(false);
-const hasTauriDropListeners = ref(false);
-const { selectFile, processCSVFile } = useFileUpload();
-const tauriUnsubscribers: UnlistenFn[] = [];
-const isTauriEnv = typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
-
-const handleDragEnter = () => {
-  isDragging.value = true;
-};
-const handleDragOver = () => {
-  isDragging.value = true;
-};
-const handleDragLeave = () => {
-  isDragging.value = false;
-};
-const handleDrop = async (event: DragEvent) => {
-  isDragging.value = false;
-  if (isTauriEnv && hasTauriDropListeners.value) {
-    event.dataTransfer?.clearData();
-    return;
-  }
-
-  const files = event.dataTransfer?.files;
-
-  if (!files?.length) {
-    return;
-  }
-
-  const file = files.item(0) as FileWithPath | null;
-  let filePath = file?.path;
-
-  if (!filePath) {
-    const uriList = event.dataTransfer?.getData('text/uri-list') ?? '';
-    const firstUri = uriList
-    .split('\n')
-    .map((uri) => uri.trim())
-    .find((uri) => uri.length > 0);
-
-    if (firstUri?.startsWith('file://')) {
-      try {
-        filePath = decodeURIComponent(firstUri.replace('file://', ''));
-      } catch (error) {
-        console.error('Failed to decode dropped file URI:', error);
-      }
-    }
-  }
-
-  if (!filePath) {
-    console.error('Dropped file is missing a file path. Drag-and-drop is only supported in the desktop app.');
-    return;
-  }
-
-  try {
-    await processCSVFile(filePath);
-  } catch (error) {
-    console.error('Failed to process dropped file:', error);
-  } finally {
-    event.dataTransfer?.clearData();
-  }
-};
-const handleClick = async () => {
-  await selectFile();
-};
-
-const cleanupTauriListeners = () => {
-  tauriUnsubscribers.forEach((unsubscribe) => {
-    try {
-      unsubscribe();
-    } catch (error) {
-      console.error('Failed to unsubscribe from Tauri event:', error);
-    }
-  });
-  tauriUnsubscribers.length = 0;
-  hasTauriDropListeners.value = false;
-};
-
-onMounted(async () => {
-  if (!isTauriEnv) {
-    return;
-  }
-
-  try {
-    const appWindow = getCurrentWindow();
-    const unlistenDragDrop = await appWindow.onDragDropEvent(async (event) => {
-      const { payload } = event;
-
-      switch (payload.type) {
-        case 'enter':
-        case 'over':
-          isDragging.value = true;
-          break;
-        case 'leave':
-          isDragging.value = false;
-          break;
-        case 'drop': {
-          isDragging.value = false;
-          const [filePath] = payload.paths ?? [];
-
-          if (!filePath) {
-            return;
-          }
-
-          try {
-            await processCSVFile(filePath);
-          } catch (error) {
-            console.error('Failed to process dropped file:', error);
-          }
-          break;
-        }
-        default:
-          break;
-      }
-    });
-    tauriUnsubscribers.push(unlistenDragDrop);
-    hasTauriDropListeners.value = true;
-  } catch (error) {
-    console.error('Failed to register Tauri drag-n-drop listeners:', error);
-    cleanupTauriListeners();
-    hasTauriDropListeners.value = false;
-  }
-});
-
-onBeforeUnmount(() => {
-  cleanupTauriListeners();
-});
+const {
+  isDragging,
+  handleDragEnter,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  selectFile,
+} = useFileUpload();
 
 </script>
 
@@ -187,7 +64,7 @@ onBeforeUnmount(() => {
           @dragover.prevent="handleDragOver"
           @dragleave.prevent="handleDragLeave"
           @drop.prevent="handleDrop"
-          @click="handleClick"
+          @click="selectFile"
       >
         <div class="flex flex-column align-items-center gap-5">
           <i class="pi pi-cloud-upload text-7xl text-400"></i>

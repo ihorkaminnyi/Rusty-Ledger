@@ -3,8 +3,8 @@ import type { PortfolioSummary } from '../types/portfolio.ts';
 import type { RebalancePlan, TargetAllocation } from '../types/rebalance.ts';
 
 export class TauriService {
-    private static isTauriAvailable(): boolean {
-        return typeof window !== undefined &&
+    static isTauriAvailable(): boolean {
+        return typeof window !== 'undefined' &&
             window.__TAURI_INTERNALS__ !== undefined;
     }
 
