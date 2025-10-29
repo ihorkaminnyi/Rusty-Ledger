@@ -37,15 +37,8 @@ pub fn parse_portfolio_summary(file_path: &str) -> Result<PortfolioSummary, Back
         });
     }
 
-    let raw_content = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(source) => {
-            return Err(BackendError::FileRead { source });
-        }
-    };
-    IBCSVParser::parse_report_view(&raw_content)
-        .map_err(|err| BackendError::ParseFailed {
-            details: err.to_string(),
-        })
-        .map(PortfolioSummary::from)
+    let raw_content = fs::read_to_string(path).map_err(|source| BackendError::FileRead { source })?;
+
+    let report_view = IBCSVParser::parse_report_view(&raw_content)?;
+    PortfolioSummary::try_from_report(report_view).map_err(BackendError::from)
 }

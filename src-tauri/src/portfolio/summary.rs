@@ -1,8 +1,13 @@
+use std::num::ParseFloatError;
+
 use serde::Serialize;
 
-use crate::infra::csv::ib_report_parser::{
-    records::{OpenPositionRecord, RowKind},
-    view::{AccountInfo, ReportViewModel, StatementInfo},
+use crate::{
+    error::ParseError,
+    infra::csv::ib_report_parser::{
+        records::{OpenPositionRecord, RowKind},
+        view::{AccountInfo, ReportViewModel, StatementInfo},
+    },
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -12,6 +17,27 @@ pub struct PortfolioSummary {
     pub account_info: AccountInfo,
     pub totals: PortfolioTotals,
     pub positions: Vec<PositionSummary>,
+}
+
+impl PortfolioSummary {
+    pub fn try_from_report(view: ReportViewModel) -> Result<Self, ParseError> {
+        let ReportViewModel {
+            statement,
+            account_info,
+            mark_to_market: _,
+            open_positions,
+        } = view;
+
+        let (positions, market_value_sum) = build_positions(&open_positions)?;
+        let totals = build_totals(&open_positions, market_value_sum)?;
+
+        Ok(PortfolioSummary {
+            statement,
+            account_info,
+            totals,
+            positions,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -36,28 +62,9 @@ pub struct PositionSummary {
     pub roi_percent: f64,
 }
 
-impl From<ReportViewModel> for PortfolioSummary {
-    fn from(view: ReportViewModel) -> Self {
-        let ReportViewModel {
-            statement,
-            account_info,
-            mark_to_market: _,
-            open_positions,
-        } = view;
-
-        let (positions, market_value_sum) = build_positions(&open_positions);
-        let totals = build_totals(&open_positions, market_value_sum);
-
-        PortfolioSummary {
-            statement,
-            account_info,
-            totals,
-            positions,
-        }
-    }
-}
-
-fn build_positions(records: &[OpenPositionRecord]) -> (Vec<PositionSummary>, f64) {
+fn build_positions(
+    records: &[OpenPositionRecord],
+) -> Result<(Vec<PositionSummary>, f64), ParseError> {
     struct InterimPosition {
         symbol: String,
         quantity: f64,
@@ -67,27 +74,21 @@ fn build_positions(records: &[OpenPositionRecord]) -> (Vec<PositionSummary>, f64
         invested_value: f64,
     }
 
-    let interim: Vec<InterimPosition> = records
+    let interim: Result<Vec<InterimPosition>, _> = records
         .iter()
         .filter(|record| record.kind == RowKind::Data)
-        .map(|record| {
-            let quantity = parse_number(&record.quantity);
-            let price = parse_number(&record.close_price);
-            let market_value = parse_number(&record.value);
-            let invested_value = parse_number(&record.cost_basis);
-            let unrealized_pl = parse_number(&record.unrealized_pl);
-
-            InterimPosition {
+        .map(|record| -> Result<InterimPosition, ParseError> {
+            Ok(InterimPosition {
                 symbol: record.symbol.clone(),
-                quantity,
-                price,
-                market_value,
-                unrealized_pl,
-                invested_value,
-            }
+                quantity: parse_number(&record.quantity)?,
+                price: parse_number(&record.close_price)?,
+                market_value: parse_number(&record.value)?,
+                invested_value: parse_number(&record.cost_basis)?,
+                unrealized_pl: parse_number(&record.unrealized_pl)?,
+            })
         })
         .collect();
-
+    let interim = interim?;
     let total_market_value: f64 = interim.iter().map(|position| position.market_value).sum();
 
     let positions = interim
@@ -111,33 +112,39 @@ fn build_positions(records: &[OpenPositionRecord]) -> (Vec<PositionSummary>, f64
         })
         .collect();
 
-    (positions, total_market_value)
+    Ok((positions, total_market_value))
 }
 
-fn build_totals(records: &[OpenPositionRecord], market_value_sum: f64) -> PortfolioTotals {
+fn build_totals(
+    records: &[OpenPositionRecord],
+    market_value_sum: f64,
+) -> Result<PortfolioTotals, ParseError> {
     let totals_row = records.iter().find(|record| record.kind == RowKind::Total);
 
     let mut positions_count = 0usize;
     let (cost_basis_sum, unrealized_sum) = records
         .iter()
         .filter(|record| record.kind == RowKind::Data)
-        .fold((0.0, 0.0), |(cost_acc, unrealized_acc), record| {
-            positions_count += 1;
-            (
-                cost_acc + parse_number(&record.cost_basis),
-                unrealized_acc + parse_number(&record.unrealized_pl),
-            )
-        });
+        .try_fold(
+            (0.0, 0.0),
+            |(cost_acc, unrealized_acc), record| -> Result<_, ParseError> {
+                positions_count += 1;
+                Ok((
+                    cost_acc + parse_number(&record.cost_basis)?,
+                    unrealized_acc + parse_number(&record.unrealized_pl)?,
+                ))
+            },
+        )?;
 
     let (cost_basis, unrealized_pl) = match totals_row {
         Some(row) => (
-            parse_number(&row.cost_basis),
-            parse_number(&row.unrealized_pl),
+            parse_number(&row.cost_basis)?,
+            parse_number(&row.unrealized_pl)?,
         ),
         None => (cost_basis_sum, unrealized_sum),
     };
 
-    PortfolioTotals {
+    Ok(PortfolioTotals {
         market_value: market_value_sum,
         cost_basis,
         unrealized_pl,
@@ -147,10 +154,10 @@ fn build_totals(records: &[OpenPositionRecord], market_value_sum: f64) -> Portfo
             0.0
         },
         total_positions: positions_count,
-    }
+    })
 }
 
-fn parse_number(value: &str) -> f64 {
+fn parse_number(value: &str) -> Result<f64, ParseFloatError> {
     let normalized = value.replace(',', "");
-    normalized.parse::<f64>().unwrap_or(0.0)
+    normalized.parse::<f64>()
 }

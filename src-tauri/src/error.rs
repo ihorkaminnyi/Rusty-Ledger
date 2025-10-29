@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::num::ParseFloatError;
 use thiserror::Error;
 
 #[derive(Debug, Serialize)]
@@ -25,6 +26,14 @@ impl CommandError {
 }
 
 #[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("CSV reading error")]
+    Csv(#[from] csv::Error),
+    #[error("Invalid number format: {0}")]
+    InvalidNumber(#[from] ParseFloatError),
+}
+
+#[derive(Debug, Error)]
 pub enum BackendError {
     #[error("File not found")]
     FileNotFound { path: String },
@@ -36,7 +45,10 @@ pub enum BackendError {
     },
 
     #[error("Report parsing failed")]
-    ParseFailed { details: String },
+    ParseFailed {
+        #[from]
+        source: ParseError,
+    },
 
     #[error("Validation failed")]
     Validation { reason: String },
@@ -55,11 +67,10 @@ impl From<BackendError> for CommandError {
                 "The selected file could not be opened. Please check file permissions.",
             )
             .with_details(source.to_string()),
-            BackendError::ParseFailed { details } => CommandError::new(
-                "report_parse_failed",
-                "We couldn't understand the CSV report format.",
-            )
-            .with_details(details),
+            BackendError::ParseFailed { source } => {
+                CommandError::new("report_parse_failed", "Could not parse the report.")
+                    .with_details(source.to_string())
+            }
             BackendError::Validation { reason } => CommandError::new("validation_failed", reason),
         }
     }

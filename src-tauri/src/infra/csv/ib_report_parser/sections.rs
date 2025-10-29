@@ -1,7 +1,10 @@
 use csv::{ReaderBuilder, StringRecord};
 
-use crate::infra::csv::ib_report_parser::parsers::{
-    AccountInformationSection, MarkToMarketSection, OpenPositionsSection, StatementSection,
+use crate::{
+    error::ParseError,
+    infra::csv::ib_report_parser::parsers::{
+        AccountInformationSection, MarkToMarketSection, OpenPositionsSection, StatementSection,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,8 +66,7 @@ impl CSVSections {
         target.push(record.clone());
     }
 
-    // TODO: looks like must be ParseError not String
-    pub fn parse(content: &str) -> Result<Self, String> {
+    pub fn parse(content: &str) -> Result<Self, ParseError> {
         let mut sections = CSVSections::new();
         let mut current_section: Option<IBReportSection> = None;
         let mut reader = ReaderBuilder::new()
@@ -73,7 +75,7 @@ impl CSVSections {
             .from_reader(content.as_bytes());
 
         for result in reader.records() {
-            let record = result.map_err(|err| format!("Failed to read CSV: {err}"))?;
+            let record = result?;
             if record.is_empty() {
                 continue;
             }
@@ -130,7 +132,7 @@ impl From<CSVSections> for ParsedSections {
     }
 }
 
-pub fn parse_sections(content: &str) -> Result<ParsedSections, String> {
+pub fn parse_sections(content: &str) -> Result<ParsedSections, ParseError> {
     CSVSections::parse(content).map(ParsedSections::from)
 }
 
@@ -149,10 +151,7 @@ mod tests {
             IBReportSection::MarkToMarketPerformanceSummary.as_str(),
             "Mark-to-Market Performance Summary"
         );
-        assert_eq!(
-            IBReportSection::OpenPositions.as_str(),
-            "Open Positions"
-        );
+        assert_eq!(IBReportSection::OpenPositions.as_str(), "Open Positions");
     }
 
     #[test]

@@ -5,6 +5,7 @@ pub mod view;
 
 use csv::StringRecord;
 
+use crate::error::ParseError;
 use parsers::{
     AccountInformationSection, MarkToMarketSection, OpenPositionsSection, StatementSection,
 };
@@ -14,7 +15,7 @@ use view::ReportViewModel;
 pub struct IBCSVParser;
 
 impl IBCSVParser {
-    pub fn parse_report(content: &str) -> Result<ParsedSections, String> {
+    pub fn parse_report(content: &str) -> Result<ParsedSections, ParseError> {
         parse_sections(content)
     }
 
@@ -34,7 +35,7 @@ impl IBCSVParser {
         OpenPositionsSection::from_records(records)
     }
 
-    pub fn parse_report_view(content: &str) -> Result<ReportViewModel, String> {
+    pub fn parse_report_view(content: &str) -> Result<ReportViewModel, ParseError> {
         Self::parse_report(content).map(ReportViewModel::from)
     }
 }
