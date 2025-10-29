@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 
-import { useFileUpload } from '../composables/useFileUpload.ts';
-import { useAppStore } from '../stores/appStore.ts';
+import { useFileUpload } from '../../composables/useFileUpload.ts';
+import { useAppStore } from '../../stores/appStore.ts';
 import Skeleton from 'primevue/skeleton';
 import Message from 'primevue/message';
+import HelpButton from './HelpButton.vue';
+import AboutModal from '../layout/AboutModal.vue';
 
 interface FeatureHighlight {
   key: string;
@@ -63,6 +65,11 @@ const handleUploadClick = () => {
   }
 };
 
+const isAboutModalVisible = ref(false);
+
+const openAboutModal = () => {
+  isAboutModalVisible.value = true;
+};
 </script>
 
 <template>
@@ -171,6 +178,8 @@ const handleUploadClick = () => {
         </div>
       </div>
     </Transition>
+    <HelpButton @open-about="openAboutModal" />
+    <AboutModal v-model="isAboutModalVisible" />
   </div>
 </template>
 

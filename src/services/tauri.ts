@@ -71,6 +71,19 @@ export class TauriService {
         return new TauriCommandError(payload, fallbackMessage, error);
     }
 
+    static async getAppVersion(): Promise<string> {
+        if (!this.isTauriAvailable()) {
+            return '0.1.0';
+        }
+
+        try {
+            const { getVersion } = await import('@tauri-apps/api/app');
+            return await getVersion();
+        } catch (error) {
+            throw this.mapError(error, 'Failed to get app version.');
+        }
+    }
+
     static async openFileDialog(): Promise<string | null> {
         this.ensureTauriAvailable();
         try {
@@ -98,6 +111,20 @@ export class TauriService {
             });
         } catch (error) {
             throw this.mapError(error, 'Failed to calculate rebalancing plan.');
+        }
+    }
+
+    static async openExternalLink(url: string): Promise<void> {
+        if (!this.isTauriAvailable()) {
+            window.open(url, '_blank', 'noopener');
+            return;
+        }
+
+        try {
+            const { openUrl } = await import('@tauri-apps/plugin-opener');
+            await openUrl(url);
+        } catch (error) {
+            throw this.mapError(error, 'Failed to open external link.');
         }
     }
 }

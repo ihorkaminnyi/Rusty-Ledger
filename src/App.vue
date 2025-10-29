@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import WelcomeScreen from './components/WelcomeScreen.vue';
+import WelcomeScreen from './components/welcome/WelcomeScreen.vue';
 import { computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import DashboardView from './components/dashboard/DashboardView.vue';
@@ -50,7 +50,7 @@ watch(errors, (current, previous = []) => {
 <template>
   <Transition name="screen-fade" mode="out-in">
     <main class="min-h-screen w-full">
-      <Toast />
+      <Toast/>
       <AppHeader v-if="!showWelcomeScreen"/>
       <WelcomeScreen v-if="showWelcomeScreen" key="welcome"/>
       <DashboardView v-else key="dashboard"/>
@@ -86,6 +86,7 @@ body {
 .screen-fade-leave-active {
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
+
 .screen-fade-enter-from,
 .screen-fade-leave-to {
   opacity: 0;
@@ -97,6 +98,7 @@ body {
 .fade-in-leave-active {
   transition: opacity 0.35s ease;
 }
+
 .fade-in-enter-from,
 .fade-in-appear-from,
 .fade-in-leave-to {
@@ -108,6 +110,7 @@ body {
 .fade-up-leave-active {
   transition: opacity 0.45s ease, transform 0.45s ease;
 }
+
 .fade-up-enter-from,
 .fade-up-appear-from,
 .fade-up-leave-to {
@@ -120,6 +123,7 @@ body {
 .scale-in-leave-active {
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
+
 .scale-in-enter-from,
 .scale-in-appear-from,
 .scale-in-leave-to {
@@ -132,12 +136,14 @@ body {
   transition: opacity 0.45s ease, transform 0.45s ease;
   transition-delay: calc(var(--stagger-index, 0) * 80ms);
 }
+
 .fade-stagger-enter-from,
 .fade-stagger-appear-from,
 .fade-stagger-leave-to {
   opacity: 0;
   transform: translateY(1.25rem);
 }
+
 .fade-stagger-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
