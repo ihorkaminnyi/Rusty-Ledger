@@ -37,11 +37,10 @@ watch(errors, (current, previous = []) => {
     }
     const summary = summaryByScope[error.scope] ?? 'Error';
     const decoratedSummary = error.code ? `${summary} (${error.code})` : summary;
-    const detail = error.details ? `${error.message}\n${error.details}` : error.message;
     toast.add({
       severity: severityByScope[error.scope] ?? 'error',
       summary: decoratedSummary,
-      detail,
+      detail: error.message,
       life: 5000,
     });
   });
