@@ -23,15 +23,15 @@ impl IBReportSection {
     }
 
     pub fn from_str(s: &str) -> Option<Self> {
-        match s.trim() {
-            "Statement" => Some(IBReportSection::Statement),
-            "Account Information" => Some(IBReportSection::AccountInformation),
-            "Mark-to-Market Performance Summary" => {
-                Some(IBReportSection::MarkToMarketPerformanceSummary)
-            }
-            "Open Positions" => Some(IBReportSection::OpenPositions),
-            _ => None,
-        }
+        let normalized = s.trim();
+        [
+            IBReportSection::Statement,
+            IBReportSection::AccountInformation,
+            IBReportSection::MarkToMarketPerformanceSummary,
+            IBReportSection::OpenPositions,
+        ]
+        .into_iter()
+        .find(|section| section.as_str() == normalized)
     }
 }
 
@@ -122,10 +122,10 @@ pub struct ParsedSections {
 impl From<CSVSections> for ParsedSections {
     fn from(sections: CSVSections) -> Self {
         ParsedSections {
-            statement: StatementSection::from_records(&sections.statement),
-            account_info: AccountInformationSection::from_records(&sections.account_info),
-            mark_to_market: MarkToMarketSection::from_records(&sections.mark_to_market),
-            open_positions: OpenPositionsSection::from_records(&sections.open_positions),
+            statement: super::IBCSVParser::parse_statement(&sections.statement),
+            account_info: super::IBCSVParser::parse_account_info(&sections.account_info),
+            mark_to_market: super::IBCSVParser::parse_mark_to_market(&sections.mark_to_market),
+            open_positions: super::IBCSVParser::parse_open_positions(&sections.open_positions),
         }
     }
 }
@@ -137,6 +137,23 @@ pub fn parse_sections(content: &str) -> Result<ParsedSections, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn as_str_matches_known_labels() {
+        assert_eq!(IBReportSection::Statement.as_str(), "Statement");
+        assert_eq!(
+            IBReportSection::AccountInformation.as_str(),
+            "Account Information"
+        );
+        assert_eq!(
+            IBReportSection::MarkToMarketPerformanceSummary.as_str(),
+            "Mark-to-Market Performance Summary"
+        );
+        assert_eq!(
+            IBReportSection::OpenPositions.as_str(),
+            "Open Positions"
+        );
+    }
 
     #[test]
     fn from_str_matches_known_sections() {
