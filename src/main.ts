@@ -8,6 +8,9 @@ import 'primeflex/primeflex.css';
 
 import Button from 'primevue/button';
 import { TabPanel, TabView } from 'primevue';
+import Tooltip from 'primevue/tooltip';
+import Toast from 'primevue/toast';
+import ToastService from 'primevue/toastservice';
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -24,9 +27,12 @@ app.use(PrimeVue, {
 });
 
 app.use(pinia);
+app.use(ToastService);
 
 app.component('Button', Button);
 app.component('TabView', TabView);
 app.component('TabPanel', TabPanel);
+app.component('Toast', Toast);
+app.directive('tooltip', Tooltip);
 
 app.mount("#app");

@@ -21,22 +21,22 @@
       </div>
 
       <div class="flex align-items-center gap-3">
-        <Button 
-          label="Завантажити новий звіт" 
-          icon="pi pi-upload"
-          @click="handleLoadNewReport"
-          :loading="isLoading"
-          outlined
-          size="small"
+        <Button
+            label="Завантажити новий звіт"
+            icon="pi pi-upload"
+            @click="handleLoadNewReport"
+            :loading="isLoading"
+            outlined
+            size="small"
         />
-        <Button 
-          label="Скинути" 
-          icon="pi pi-refresh"
-          @click="handleReset"
-          :loading="isLoading"
-          severity="secondary"
-          outlined
-          size="small"
+        <Button
+            label="Скинути"
+            icon="pi pi-refresh"
+            @click="handleReset"
+            :loading="isLoading"
+            severity="secondary"
+            outlined
+            size="small"
         />
       </div>
     </div>
@@ -60,25 +60,25 @@ const accountName = computed(() => accountInfo.value?.name ?? '');
 const baseCurrency = computed(() => accountInfo.value?.baseCurrency ?? '');
 const statementPeriod = computed(() => statementInfo.value?.period ?? '');
 const statementGenerated = computed(() =>
-  statementInfo.value?.whenGenerated ? formatReportDate(statementInfo.value.whenGenerated) : ''
+    statementInfo.value?.whenGenerated ? formatReportDate(statementInfo.value.whenGenerated) : '',
 );
 
 const showAccountMeta = computed(() => Boolean(
-  accountName.value ||
-  statementPeriod.value ||
-  statementGenerated.value ||
-  baseCurrency.value
+    accountName.value ||
+    statementPeriod.value ||
+    statementGenerated.value ||
+    baseCurrency.value,
 ));
 
 const formatReportDate = (dateString?: string | null): string => {
   if (!dateString) return '';
   try {
     const cleanDateString = dateString
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/^["']|["']$/g, ''); // Remove surrounding quotes
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/^["']|["']$/g, '');
 
     let date = new Date(cleanDateString);
 
@@ -86,9 +86,9 @@ const formatReportDate = (dateString?: string | null): string => {
       const monthNames = {
         'January': '01', 'February': '02', 'March': '03', 'April': '04',
         'May': '05', 'June': '06', 'July': '07', 'August': '08',
-        'September': '09', 'October': '10', 'November': '11', 'December': '12'
+        'September': '09', 'October': '10', 'November': '11', 'December': '12',
       };
-      
+
       const match = cleanDateString.match(/(\w+)\s+(\d{1,2}),\s+(\d{4})/);
       if (match) {
         const [, monthName, day, year] = match;
@@ -102,11 +102,11 @@ const formatReportDate = (dateString?: string | null): string => {
     if (isNaN(date.getTime())) {
       return cleanDateString;
     }
-    
+
     return date.toLocaleDateString('uk-UA', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   } catch (error) {
     console.error('Date parsing error:', error);
@@ -125,7 +125,7 @@ const handleLoadNewReport = async () => {
 const handleReset = () => {
   appStore.clearPortfolio();
   appStore.setRebalance(null);
-  appStore.setError(null);
+  appStore.clearAllErrors();
 };
 </script>
 

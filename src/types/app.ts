@@ -1,5 +1,6 @@
 import { PortfolioSummary } from './portfolio.ts';
 import type { RebalancePlan } from './rebalance.ts';
+import type { AppError } from './errors.ts';
 
 export interface AppState {
     isDataLoaded: boolean;
@@ -8,6 +9,6 @@ export interface AppState {
     showAboutModal: boolean;
     portfolio: PortfolioSummary | null;
     rebalance: RebalancePlan | null;
-    error: string | null;
+    errors: AppError[];
     reportFilePath: string | null;
 }

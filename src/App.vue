@@ -1,20 +1,57 @@
 <script setup lang="ts">
 import WelcomeScreen from './components/WelcomeScreen.vue';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import DashboardView from './components/dashboard/DashboardView.vue';
 import { useAppStore } from './stores/appStore.ts';
 import AppHeader from './components/layout/AppHeader.vue';
+import { useToast } from 'primevue/usetoast';
 
 const appStore = useAppStore();
-const { hasPortfolio } = storeToRefs(appStore);
+const { hasPortfolio, errors } = storeToRefs(appStore);
 
 const showWelcomeScreen = computed(() => !hasPortfolio.value);
+
+const severityByScope: Record<string, 'error' | 'warn' | 'info'> = {
+  upload: 'error',
+  rebalancing: 'error',
+  tauri: 'warn',
+  portfolio: 'info',
+};
+
+const summaryByScope: Record<string, string> = {
+  upload: 'Import Error',
+  rebalancing: 'Rebalancing Issue',
+  tauri: 'Desktop Integration',
+  portfolio: 'Portfolio Issue',
+  global: 'Application Error',
+};
+
+const toast = useToast();
+
+watch(errors, (current, previous = []) => {
+  const previousIds = new Set(previous.map(error => error.id));
+  current.forEach(error => {
+    if (previousIds.has(error.id)) {
+      return;
+    }
+    const summary = summaryByScope[error.scope] ?? 'Error';
+    const decoratedSummary = error.code ? `${summary} (${error.code})` : summary;
+    const detail = error.details ? `${error.message}\n${error.details}` : error.message;
+    toast.add({
+      severity: severityByScope[error.scope] ?? 'error',
+      summary: decoratedSummary,
+      detail,
+      life: 5000,
+    });
+  });
+}, { deep: true });
 </script>
 
 <template>
   <Transition name="screen-fade" mode="out-in">
     <main class="min-h-screen w-full">
+      <Toast />
       <AppHeader v-if="!showWelcomeScreen"/>
       <WelcomeScreen v-if="showWelcomeScreen" key="welcome"/>
       <DashboardView v-else key="dashboard"/>

@@ -1,4 +1,5 @@
 pub mod commands;
+mod error;
 mod infra;
 mod portfolio;
 

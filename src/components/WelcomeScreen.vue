@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 
 import { useFileUpload } from '../composables/useFileUpload.ts';
 import { useAppStore } from '../stores/appStore.ts';
 import Skeleton from 'primevue/skeleton';
+import Message from 'primevue/message';
 
 interface FeatureHighlight {
   key: string;
@@ -48,6 +50,12 @@ const {
 
 const appStore = useAppStore();
 const { isLoading } = storeToRefs(appStore);
+
+const uploadErrors = computed(() => appStore.errorsByScope('upload'));
+
+const handleDismissUploadError = (id: string) => {
+  appStore.dismissError(id);
+};
 
 const handleUploadClick = () => {
   if (!isLoading.value) {
@@ -116,12 +124,35 @@ const handleUploadClick = () => {
               </p>
             </div>
             <div v-else key="upload-skeleton" class="flex flex-column align-items-center gap-4 w-full">
-              <Skeleton shape="circle" size="5rem" animation="wave" />
-              <Skeleton width="80%" height="1.5rem" animation="wave" />
-              <Skeleton width="60%" height="1rem" animation="wave" />
+              <Skeleton shape="circle" size="5rem" animation="wave"/>
+              <Skeleton width="80%" height="1.5rem" animation="wave"/>
+              <Skeleton width="60%" height="1rem" animation="wave"/>
             </div>
           </Transition>
         </div>
+      </div>
+    </Transition>
+
+    <Transition name="fade-in">
+      <div v-if="uploadErrors.length" class="w-full max-w-30rem mb-4">
+        <TransitionGroup name="fade-in" tag="div" class="flex flex-column gap-2">
+          <Message
+              v-for="error in uploadErrors"
+              :key="error.id"
+              severity="error"
+              :closable="true"
+              @close="handleDismissUploadError(error.id)"
+          >
+            <div class="flex flex-column gap-1">
+            <span class="font-semibold text-sm text-900">
+              Неможливо обробити файл
+            </span>
+              <span class="text-sm line-height-3 text-700">
+              {{ error.message }}
+            </span>
+            </div>
+          </Message>
+        </TransitionGroup>
       </div>
     </Transition>
 
@@ -148,6 +179,7 @@ const handleUploadClick = () => {
   border-color: var(--primary-color, #6366f1);
   background-color: rgba(99, 102, 241, 0.08);
 }
+
 .upload-zone.is-loading {
   position: relative;
   pointer-events: none;

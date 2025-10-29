@@ -2,7 +2,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-import { TauriService } from '../services/tauri';
+import { TauriService, isTauriCommandError } from '../services/tauri';
 import { useAppStore } from '../stores/appStore.ts';
 
 type FileWithPath = File & { path?: string };
@@ -34,17 +34,35 @@ export function useFileUpload() {
         tauriUnsubscribers.length = 0;
     };
 
+    const pushUploadError = (error: unknown) => {
+        if (isTauriCommandError(error)) {
+            appStore.pushError({
+                scope: 'upload',
+                message: error.message,
+                details: error.details,
+                code: error.code,
+            });
+            return;
+        }
+
+        const fallbackMessage = error instanceof Error ? error.message : String(error);
+        appStore.pushError({
+            scope: 'upload',
+            message: fallbackMessage,
+            details: error instanceof Error ? error.stack : undefined,
+        });
+    };
+
     const processFilePath = async (filePath: string) => {
         appStore.setLoading(true);
-        appStore.setError(null);
+        appStore.clearErrorsByScope('upload');
         try {
             const portfolio = await TauriService.processCSVFile(filePath);
             appStore.setPortfolio(portfolio);
             appStore.setReportFilePath(filePath);
             appStore.setRebalance(null);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            appStore.setError(errorMessage);
+            pushUploadError(error);
             throw error;
         } finally {
             appStore.setLoading(false);
@@ -52,9 +70,13 @@ export function useFileUpload() {
     };
 
     const selectFile = async () => {
-        const filePath = await TauriService.openFileDialog();
-        if (filePath) {
-            await processFilePath(filePath);
+        try {
+            const filePath = await TauriService.openFileDialog();
+            if (filePath) {
+                await processFilePath(filePath);
+            }
+        } catch (error) {
+            pushUploadError(error);
         }
     };
 
@@ -91,6 +113,7 @@ export function useFileUpload() {
             await processFilePath(filePath);
         } catch (error) {
             console.error('Failed to process dropped file:', error);
+            pushUploadError(error);
         } finally {
             clearDataTransfer(event);
         }
@@ -127,6 +150,7 @@ export function useFileUpload() {
                             await processFilePath(filePath);
                         } catch (error) {
                             console.error('Failed to process dropped file:', error);
+                            pushUploadError(error);
                         }
                         return;
                     }

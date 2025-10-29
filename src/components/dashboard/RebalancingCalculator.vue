@@ -76,8 +76,24 @@ const enhancedTargets = computed(() => {
   });
 });
 
-const validationErrors = computed(() => validateTargets());
-const hasValidationErrors = computed(() => validationErrors.value.length > 0);
+const validationResult = computed(() => validateTargets());
+const globalValidationErrors = computed(() => validationResult.value.global);
+const perTargetValidationErrors = computed(() => validationResult.value.perSymbol);
+
+const allocationTooltipMessage = computed(() => {
+  if (isValidTargetAllocation.value) {
+    return null;
+  }
+  return `Total target allocation must equal 100%. Currently at ${totalTargetPercent.value.toFixed(2)}%.`;
+});
+
+const hasValidationErrors = computed(() => (
+    globalValidationErrors.value.length > 0 ||
+    Object.keys(perTargetValidationErrors.value).length > 0 ||
+    Boolean(allocationTooltipMessage.value)
+));
+
+const canSubmitTargets = computed(() => canCalculate.value && !hasValidationErrors.value);
 
 const handleTargetUpdate = (symbol: string, value: number | null) => {
   const targetValue = value || 0;
@@ -85,7 +101,7 @@ const handleTargetUpdate = (symbol: string, value: number | null) => {
 };
 
 const handleCalculateRebalancing = async () => {
-  if (!canCalculate.value) return;
+  if (!canSubmitTargets.value) return;
   await calculateRebalancing();
   showRebalancingDialog.value = rebalancingState.hasCalculated;
 };
@@ -106,6 +122,21 @@ const getActionIcon = (action: string): string => {
 
 const getActionSeverity = (action: string): 'success' | 'danger' => {
   return action.toLowerCase() === 'buy' ? 'success' : 'danger';
+};
+
+const hasTargetError = (symbol: string) => {
+  const symbolErrors = perTargetValidationErrors.value[symbol] ?? [];
+  if (symbolErrors.length > 0) return true;
+  return Boolean(allocationTooltipMessage.value);
+};
+
+const targetTooltip = (symbol: string) => {
+  const symbolErrors = perTargetValidationErrors.value[symbol] ?? [];
+  const messages = [...symbolErrors];
+  if (allocationTooltipMessage.value) {
+    messages.push(allocationTooltipMessage.value);
+  }
+  return messages.join('\n');
 };
 </script>
 
@@ -133,9 +164,9 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
     </div>
 
     <div class="flex flex-column">
-      <div v-if="hasValidationErrors" class="flex flex-column">
+      <div v-if="globalValidationErrors.length" class="flex flex-column">
         <Message
-            v-for="error in validationErrors"
+            v-for="error in globalValidationErrors"
             :key="error"
             severity="error"
             :closable="false"
@@ -183,7 +214,8 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
                 :disabled="rebalancingState.isCalculating"
                 class="target-input p-inputnumber-sm w-full"
                 inputClass="p-inputtext-sm w-full"
-                :class="{ 'p-invalid': !isValidTargetAllocation }"
+                :class="{ 'p-invalid': hasTargetError(data.symbol) }"
+                v-tooltip.bottom="targetTooltip(data.symbol)"
             />
           </template>
         </Column>
@@ -226,7 +258,7 @@ const getActionSeverity = (action: string): 'success' | 'danger' => {
             label="Calculate Rebalancing Plan"
             icon="pi pi-calculator"
             @click="handleCalculateRebalancing"
-            :disabled="!canCalculate"
+            :disabled="!canSubmitTargets"
             :loading="rebalancingState.isCalculating"
             size="small"
             class="p-button-sm px-3"

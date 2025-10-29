@@ -1,13 +1,18 @@
 import { computed, reactive, readonly } from 'vue';
 import type { TargetAllocation, TradeInstruction } from '../types/rebalance.ts';
 import { useAppStore } from '../stores/appStore.ts';
-import { TauriService } from '../services/tauri.ts';
+import { TauriService, isTauriCommandError } from '../services/tauri.ts';
 
 interface RebalancingState {
     targets: TargetAllocation[];
     actions: TradeInstruction[];
     isCalculating: boolean;
     hasCalculated: boolean;
+}
+
+interface TargetValidationResult {
+    global: string[];
+    perSymbol: Record<string, string[]>;
 }
 
 export function useRebalancing() {
@@ -85,14 +90,18 @@ export function useRebalancing() {
 
     const calculateRebalancing = async (): Promise<void> => {
         if (!portfolio.value || !canCalculate.value) {
-            appStore.setError('Cannot calculate rebalancing: invalid portfolio or targets');
+            appStore.pushError({
+                scope: 'rebalancing',
+                message: 'Cannot calculate rebalancing: invalid portfolio or targets',
+            });
             return;
         }
 
         if (!reportFilePath.value) {
-            appStore.setError(
-                'Original report file is required for rebalancing. Please import the portfolio again.',
-            );
+            appStore.pushError({
+                scope: 'rebalancing',
+                message: 'Original report file is required for rebalancing. Please import the portfolio again.',
+            });
             return;
         }
 
@@ -102,14 +111,27 @@ export function useRebalancing() {
             state.actions = plan.trades;
             state.hasCalculated = true;
             appStore.setRebalance(plan);
-            appStore.setError(null);
+            appStore.clearErrorsByScope('rebalancing');
         } catch (error) {
             console.error('Rebalancing calculation error:', error);
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : `Failed to calculate rebalancing: ${JSON.stringify(error)}`;
-            appStore.setError(errorMessage);
+            if (isTauriCommandError(error)) {
+                appStore.pushError({
+                    scope: 'rebalancing',
+                    message: error.message,
+                    details: error.details,
+                    code: error.code,
+                });
+            } else {
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : `Failed to calculate rebalancing: ${JSON.stringify(error)}`;
+                appStore.pushError({
+                    scope: 'rebalancing',
+                    message: errorMessage,
+                    details: error instanceof Error ? error.stack : undefined,
+                });
+            }
         } finally {
             state.isCalculating = false;
         }
@@ -152,8 +174,9 @@ export function useRebalancing() {
         });
     };
 
-    const validateTargets = (): string[] => {
+    const validateTargets = (): TargetValidationResult => {
         const errors: string[] = [];
+        const perSymbol: Record<string, string[]> = {};
 
         if (state.targets.length === 0) {
             errors.push('No target allocations defined');
@@ -161,18 +184,55 @@ export function useRebalancing() {
 
         const negativeTargets = state.targets.filter(t => t.targetPercent < 0);
         if (negativeTargets.length > 0) {
-            errors.push('Target percentages cannot be negative');
+            negativeTargets.forEach(target => {
+                if (!perSymbol[target.symbol]) {
+                    perSymbol[target.symbol] = [];
+                }
+                perSymbol[target.symbol].push('Target allocation cannot be negative.');
+            });
+            errors.push('Some targets have negative allocations.');
         }
 
         const duplicateSymbols = state.targets
         .map(t => t.symbol)
         .filter((symbol, index, arr) => arr.indexOf(symbol) !== index);
 
-        if (duplicateSymbols.length > 0) {
-            errors.push(`Duplicate symbols found: ${duplicateSymbols.join(', ')}`);
+        const uniqueDuplicateSymbols = Array.from(new Set(duplicateSymbols));
+
+        if (uniqueDuplicateSymbols.length > 0) {
+            errors.push(`Duplicate symbols found: ${uniqueDuplicateSymbols.join(', ')}`);
+            uniqueDuplicateSymbols.forEach(symbol => {
+                if (!perSymbol[symbol]) {
+                    perSymbol[symbol] = [];
+                }
+                perSymbol[symbol].push('Symbol is duplicated in target allocations.');
+            });
         }
 
-        return errors;
+        state.targets.forEach(target => {
+            if (!perSymbol[target.symbol]) {
+                perSymbol[target.symbol] = [];
+            }
+
+            if (!Number.isFinite(target.targetPercent)) {
+                perSymbol[target.symbol].push('Target allocation must be a valid number.');
+            }
+
+            if (target.targetPercent > 100) {
+                perSymbol[target.symbol].push('Target allocation cannot exceed 100%.');
+            }
+        });
+
+        Object.keys(perSymbol).forEach(symbol => {
+            if (perSymbol[symbol].length === 0) {
+                delete perSymbol[symbol];
+            }
+        });
+
+        return {
+            global: errors,
+            perSymbol,
+        };
     };
 
     const autoBalanceTargets = () => {
