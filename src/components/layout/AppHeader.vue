@@ -22,7 +22,7 @@
 
       <div class="flex align-items-center gap-3">
         <Button
-            label="Завантажити новий звіт"
+            label="Upload New Report"
             icon="pi pi-upload"
             @click="handleLoadNewReport"
             :loading="isLoading"
@@ -30,7 +30,7 @@
             size="small"
         />
         <Button
-            label="Скинути"
+            label="Reset"
             icon="pi pi-refresh"
             @click="handleReset"
             :loading="isLoading"

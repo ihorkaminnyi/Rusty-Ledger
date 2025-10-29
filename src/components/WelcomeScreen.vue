@@ -20,21 +20,21 @@ const featureHighlights: FeatureHighlight[] = [
     key: 'core-data',
     icon: 'pi pi-chart-bar',
     wrapperClass: 'bg-blue-50 text-primary',
-    title: 'Ключові дані',
+    title: 'Key Data',
     titleClass: 'text-900',
   },
   {
     key: 'distribution',
     icon: 'pi pi-chart-pie',
     wrapperClass: 'bg-purple-50 text-purple-500',
-    title: 'Розподіл активів',
+    title: 'Asset Allocation',
     titleClass: 'text-900',
   },
   {
     key: 'rebalance',
     icon: 'pi pi-calculator',
     wrapperClass: 'bg-green-50 text-green-500',
-    title: 'Ребалансування',
+    title: 'Rebalancing',
     titleClass: 'text-900',
   },
 ];
@@ -74,7 +74,7 @@ const handleUploadClick = () => {
           <h1 class="text-5xl font-bold text-900 mb-2">Rusty Ledger</h1>
         </div>
         <p class="text-xl font-medium text-700">
-          Приватний аналіз інвестиційного портфелю
+          Private analysis of your investment portfolio
         </p>
       </div>
     </Transition>
@@ -118,9 +118,9 @@ const handleUploadClick = () => {
           <Transition name="fade-in" mode="out-in">
             <div v-if="!isLoading" key="upload-content" class="flex flex-column align-items-center gap-5">
               <i class="pi pi-cloud-upload text-7xl text-400"></i>
-              <h3 class="text-xl font-semibold text-900 m-0">Перетягніть ваш CSV-звіт сюди</h3>
+              <h3 class="text-xl font-semibold text-900 m-0">Drag your CSV report here</h3>
               <p class="text-base text-600 m-0">
-                <span class="hidden md:inline">...або натисніть щоб обрати файл</span>
+                <span class="hidden md:inline">...or click to choose a file</span>
               </p>
             </div>
             <div v-else key="upload-skeleton" class="flex flex-column align-items-center gap-4 w-full">
@@ -145,7 +145,7 @@ const handleUploadClick = () => {
           >
             <div class="flex flex-column gap-1">
             <span class="font-semibold text-sm text-900">
-              Неможливо обробити файл
+              Unable to process the file
             </span>
               <span class="text-sm line-height-3 text-700">
               {{ error.message }}
@@ -164,9 +164,9 @@ const handleUploadClick = () => {
             <i class="pi pi-shield text-xl"></i>
           </div>
           <div class="text-sm text-teal-800 line-height-3">
-            <strong>Повна приватність:</strong>
-            Всі дані обробляються локально на вашому комп'ютері.
-            Ніяка інформація не передається на зовнішні сервери.
+            <strong>Complete privacy:</strong>
+            All data is processed locally on your computer.
+            No information is transmitted to external servers.
           </div>
         </div>
       </div>
