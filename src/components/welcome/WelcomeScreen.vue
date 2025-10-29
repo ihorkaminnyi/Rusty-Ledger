@@ -77,7 +77,7 @@ const openAboutModal = () => {
     <Transition name="fade-up" appear>
       <div class="text-center mb-4">
         <div class="flex align-items-center justify-content-center gap-3 mb-1">
-          <i class="pi pi-chart-pie text-6xl text-primary"></i>
+          <img src="/64x64.png" alt="Rusty Ledger logo" width="64" height="64" />
           <h1 class="text-5xl font-bold text-900 mb-2">Rusty Ledger</h1>
         </div>
         <p class="text-xl font-medium text-700">

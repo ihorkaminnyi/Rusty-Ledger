@@ -57,7 +57,7 @@ const openIssues = () => {
     <div class="flex flex-column gap-4">
       <div class="text-center pb-3 border-bottom-1 surface-border">
         <div class="flex align-items-center justify-content-center gap-3 mb-3">
-          <i class="pi pi-chart-pie text-5xl text-primary"></i>
+          <img src="/64x64.png" alt="Rusty Ledger logo" width="64" height="64" />
           <div class="text-left">
             <h2 class="text-2xl font-bold text-900 m-0">Rusty Ledger</h2>
             <p class="text-sm text-600 m-0 mt-1">Version {{ appVersion }}</p>
