@@ -48,10 +48,9 @@ const openIssues = () => {
   <Dialog
       v-model:visible="isVisible"
       modal
-      :closable="true"
+      :closable="false"
       :draggable="false"
       class="about-modal"
-      header="About Rusty Ledger"
       :style="{ width: '500px' }"
   >
     <div class="flex flex-column gap-4">
