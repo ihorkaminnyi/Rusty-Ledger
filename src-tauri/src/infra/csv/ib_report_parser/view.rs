@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use heck::ToSnakeCase;
 use serde::Serialize;
 
@@ -87,49 +89,38 @@ impl SectionView for OpenPositionsSection {
     }
 }
 
-fn account_rows_to_info(rows: Vec<FieldRow>) -> AccountInfo {
-    let mut info = AccountInfo::default();
-
+fn apply_field_rows(rows: Vec<FieldRow>, mapping: &mut HashMap<&str, &mut Option<String>>) {
     for row in rows.into_iter().filter(|row| row.kind != RowKind::Header) {
-        let FieldRow { name, value, .. } = row;
-        let key = name.to_snake_case();
-        if key.is_empty() || key == "account" {
-            continue;
-        }
-
-        match key.as_str() {
-            "account_capabilities" => info.account_capabilities = Some(value),
-            "account_type" => info.account_type = Some(value),
-            "base_currency" => info.base_currency = Some(value),
-            "customer_type" => info.customer_type = Some(value),
-            "name" => info.name = Some(value),
-            _ => {}
+        let key = row.name.to_snake_case();
+        if let Some(target_field) = mapping.get_mut(key.as_str()) {
+            **target_field = Some(row.value);
         }
     }
+}
 
+fn account_rows_to_info(rows: Vec<FieldRow>) -> AccountInfo {
+    let mut info = AccountInfo::default();
+    let mut mapping: HashMap<&str, &mut Option<String>> = HashMap::new();
+    mapping.insert("account_capabilities", &mut info.account_capabilities);
+    mapping.insert("account_type", &mut info.account_type);
+    mapping.insert("base_currency", &mut info.base_currency);
+    mapping.insert("customer_type", &mut info.customer_type);
+    mapping.insert("name", &mut info.name);
+
+    apply_field_rows(rows, &mut mapping);
     info
 }
 
 fn statement_rows_to_info(rows: Vec<FieldRow>) -> StatementInfo {
     let mut info = StatementInfo::default();
+    let mut mapping: HashMap<&str, &mut Option<String>> = HashMap::new();
+    mapping.insert("title", &mut info.title);
+    mapping.insert("broker_name", &mut info.broker_name);
+    mapping.insert("broker_address", &mut info.broker_address);
+    mapping.insert("period", &mut info.period);
+    mapping.insert("when_generated", &mut info.when_generated);
 
-    for row in rows.into_iter().filter(|row| row.kind != RowKind::Header) {
-        let FieldRow { name, value, .. } = row;
-        let key = name.to_snake_case();
-        if key.is_empty() {
-            continue;
-        }
-
-        match key.as_str() {
-            "title" => info.title = Some(value),
-            "broker_name" => info.broker_name = Some(value),
-            "broker_address" => info.broker_address = Some(value),
-            "period" => info.period = Some(value),
-            "when_generated" => info.when_generated = Some(value),
-            _ => {}
-        }
-    }
-
+    apply_field_rows(rows, &mut mapping);
     info
 }
 
