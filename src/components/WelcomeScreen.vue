@@ -175,11 +175,6 @@ const handleUploadClick = () => {
 </template>
 
 <style scoped>
-.upload-zone.is-dragging {
-  border-color: var(--primary-color, #6366f1);
-  background-color: rgba(99, 102, 241, 0.08);
-}
-
 .upload-zone.is-loading {
   position: relative;
   pointer-events: none;
