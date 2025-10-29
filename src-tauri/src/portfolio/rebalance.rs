@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::BackendError;
+
 use super::summary::{PortfolioSummary, PositionSummary};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,6 +11,37 @@ use super::summary::{PortfolioSummary, PositionSummary};
 pub struct TargetAllocation {
     pub symbol: String,
     pub target_percent: f64,
+}
+
+#[derive(Debug)]
+pub struct ValidatedTargets(Vec<TargetAllocation>);
+
+impl ValidatedTargets {
+    pub fn new(targets: Vec<TargetAllocation>) -> Result<Self, BackendError> {
+        const REBALANCE_TOLERANCE: f64 = 0.01;
+
+        if targets.is_empty() {
+            return Err(BackendError::Validation {
+                reason: "Target allocations are required to compute a rebalance plan.".to_string(),
+            });
+        }
+
+        let total_target_percent: f64 = targets.iter().map(|t| t.target_percent).sum();
+        if (total_target_percent - 100.0).abs() > REBALANCE_TOLERANCE {
+            return Err(BackendError::Validation {
+                reason: format!(
+                    "Target allocations must sum to 100%, but they currently sum to {:.2}%.",
+                    total_target_percent
+                ),
+            });
+        }
+
+        Ok(Self(targets))
+    }
+
+    pub fn as_slice(&self) -> &[TargetAllocation] {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -38,7 +71,7 @@ pub struct RebalancePlan {
 pub struct PortfolioRebalancer;
 
 impl PortfolioRebalancer {
-    pub fn calculate(summary: &PortfolioSummary, targets: &[TargetAllocation]) -> RebalancePlan {
+    pub fn calculate(summary: &PortfolioSummary, targets: &ValidatedTargets) -> RebalancePlan {
         let total_value = summary.totals.market_value.max(0.0);
         let positions = positions_map(&summary.positions);
 
@@ -56,12 +89,12 @@ impl PortfolioRebalancer {
     fn calculate_target_trades<'a>(
         total_value: f64,
         positions: &HashMap<&'a str, &'a PositionSummary>,
-        targets: &'a [TargetAllocation],
+        targets: &'a ValidatedTargets,
     ) -> (Vec<TradeInstruction>, HashSet<&'a str>) {
         let mut trades = Vec::new();
         let mut handled = HashSet::new();
 
-        for target in targets {
+        for target in targets.as_slice() {
             let symbol = target.symbol.trim();
             if symbol.is_empty() {
                 continue;
@@ -193,7 +226,7 @@ mod tests {
             position("VTI", 700.0, 70.0),
             position("VXUS", 300.0, 60.0),
         ]);
-        let targets = vec![
+        let targets = ValidatedTargets::new(vec![
             TargetAllocation {
                 symbol: "VTI".into(),
                 target_percent: 60.0,
@@ -202,7 +235,8 @@ mod tests {
                 symbol: "VXUS".into(),
                 target_percent: 40.0,
             },
-        ];
+        ])
+        .unwrap();
 
         let plan = PortfolioRebalancer::calculate(&summary, &targets);
 
@@ -220,13 +254,12 @@ mod tests {
     #[test]
     fn sells_positions_without_targets() {
         let summary = summary_with_positions(vec![position("BND", 500.0, 80.0)]);
-        let plan = PortfolioRebalancer::calculate(
-            &summary,
-            &[TargetAllocation {
-                symbol: "VTI".into(),
-                target_percent: 100.0,
-            }],
-        );
+        let targets = ValidatedTargets::new(vec![TargetAllocation {
+            symbol: "VTI".into(),
+            target_percent: 100.0,
+        }])
+        .unwrap();
+        let plan = PortfolioRebalancer::calculate(&summary, &targets);
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
