@@ -42,8 +42,24 @@ impl PortfolioRebalancer {
         let total_value = summary.totals.market_value.max(0.0);
         let positions = positions_map(&summary.positions);
 
-        let mut handled: HashSet<&str> = HashSet::new();
+        let (mut trades, mut handled) =
+            Self::calculate_target_trades(total_value, &positions, targets);
+        let sell_off_trades = Self::calculate_sell_off_trades(&positions, &mut handled);
+        trades.extend(sell_off_trades);
+
+        RebalancePlan {
+            total_value,
+            trades,
+        }
+    }
+
+    fn calculate_target_trades<'a>(
+        total_value: f64,
+        positions: &HashMap<&'a str, &'a PositionSummary>,
+        targets: &'a [TargetAllocation],
+    ) -> (Vec<TradeInstruction>, HashSet<&'a str>) {
         let mut trades = Vec::new();
+        let mut handled = HashSet::new();
 
         for target in targets {
             let symbol = target.symbol.trim();
@@ -78,16 +94,10 @@ impl PortfolioRebalancer {
                 None => (None, delta_value),
             };
 
-            let action = match quantity_delta {
-                Some(qty) if qty.is_sign_positive() => TradeAction::Buy,
-                Some(_) => TradeAction::Sell,
-                None => {
-                    if value_delta.is_sign_positive() {
-                        TradeAction::Buy
-                    } else {
-                        TradeAction::Sell
-                    }
-                }
+            let action = if value_delta.is_sign_positive() {
+                TradeAction::Buy
+            } else {
+                TradeAction::Sell
             };
 
             trades.push(TradeInstruction {
@@ -100,6 +110,15 @@ impl PortfolioRebalancer {
 
             handled.insert(symbol);
         }
+
+        (trades, handled)
+    }
+
+    fn calculate_sell_off_trades<'a>(
+        positions: &HashMap<&'a str, &'a PositionSummary>,
+        handled: &mut HashSet<&'a str>,
+    ) -> Vec<TradeInstruction> {
+        let mut trades = Vec::new();
 
         for (symbol, position) in positions
             .iter()
@@ -121,10 +140,7 @@ impl PortfolioRebalancer {
             });
         }
 
-        RebalancePlan {
-            total_value,
-            trades,
-        }
+        trades
     }
 }
 
