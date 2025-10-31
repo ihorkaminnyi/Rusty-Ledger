@@ -40,6 +40,7 @@ Rusty Ledger currently supports account statements from Interactive Brokers, the
 ## Installation
 
 - Install the prerequisites for a Tauri project: recent Rust toolchain, Node.js 18+ (with npm), and the system dependencies listed in the [Tauri setup guide](https://tauri.app/v1/guides/getting-started/prerequisites/).
+- Arch Linux users must install `webkit2gtk-4.1` (`sudo pacman -S webkit2gtk-4.1`) because the current Tauri toolkit targets that GTK WebKit build and compilation will fail without it.
 - Clone this repository and install frontend dependencies with `npm install`.
 
 ## Development & Build
@@ -47,3 +48,4 @@ Rusty Ledger currently supports account statements from Interactive Brokers, the
 - Run `npm run dev` to start the Vite dev server alongside the Tauri shell.
 - Run `npm run build` for a production-ready frontend build.
 - Run `npm run tauri build` to produce a packaged desktop application.
+- When running on Linux Wayland, Tauri currently falls back to XWayland in many cases; expect window decorations and rendering to look slightly degraded compared to pure X11.
