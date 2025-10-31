@@ -4,9 +4,6 @@ use heck::ToSnakeCase;
 use serde::Serialize;
 
 use crate::infra::csv::ib_report_parser::{
-    parsers::{
-        AccountInformationSection, MarkToMarketSection, OpenPositionsSection, StatementSection,
-    },
     records::{FieldRow, MarkToMarketRecord, OpenPositionRecord, RowKind},
     sections::ParsedSections,
 };
@@ -42,10 +39,10 @@ pub struct AccountInfo {
 impl From<ParsedSections> for ReportViewModel {
     fn from(parsed: ParsedSections) -> Self {
         ReportViewModel {
-            statement: parsed.statement.into_view(),
-            account_info: parsed.account_info.into_view(),
-            mark_to_market: parsed.mark_to_market.into_view(),
-            open_positions: parsed.open_positions.into_view(),
+            statement: statement_rows_to_info(parsed.statement.rows),
+            account_info: account_rows_to_info(parsed.account_info.rows),
+            mark_to_market: parsed.mark_to_market.rows,
+            open_positions: parsed.open_positions.rows,
         }
     }
 }
@@ -53,39 +50,6 @@ impl From<ParsedSections> for ReportViewModel {
 impl ReportViewModel {
     pub fn from_sections(parsed: ParsedSections) -> Self {
         parsed.into()
-    }
-}
-
-trait SectionView {
-    type Output: Serialize;
-    fn into_view(self) -> Self::Output;
-}
-
-impl SectionView for StatementSection {
-    type Output = StatementInfo;
-    fn into_view(self) -> Self::Output {
-        statement_rows_to_info(self.rows)
-    }
-}
-
-impl SectionView for AccountInformationSection {
-    type Output = AccountInfo;
-    fn into_view(self) -> Self::Output {
-        account_rows_to_info(self.rows)
-    }
-}
-
-impl SectionView for MarkToMarketSection {
-    type Output = Vec<MarkToMarketRecord>;
-    fn into_view(self) -> Self::Output {
-        self.rows
-    }
-}
-
-impl SectionView for OpenPositionsSection {
-    type Output = Vec<OpenPositionRecord>;
-    fn into_view(self) -> Self::Output {
-        self.rows
     }
 }
 

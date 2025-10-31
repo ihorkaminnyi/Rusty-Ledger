@@ -1,25 +1,13 @@
-use csv::StringRecord;
-
 use crate::infra::csv::ib_report_parser::records::FieldRow;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct StatementSection {
-    pub rows: Vec<FieldRow>,
-}
+use super::Section;
 
-impl StatementSection {
-    pub fn from_records(records: &[StringRecord]) -> Self {
-        let rows = records
-            .iter()
-            .filter_map(FieldRow::from_record)
-            .collect::<Vec<_>>();
-        Self { rows }
-    }
-}
+pub type StatementSection = Section<FieldRow>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use csv::StringRecord;
 
     #[test]
     fn builds_statement_section() {

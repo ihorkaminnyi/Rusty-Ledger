@@ -41,7 +41,7 @@ impl FieldRow {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MarkToMarketRecord {
     pub kind: RowKind,
     pub asset_category: String,
@@ -78,7 +78,7 @@ impl MarkToMarketRecord {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OpenPositionRecord {
     pub kind: RowKind,
     pub data_discriminator: String,

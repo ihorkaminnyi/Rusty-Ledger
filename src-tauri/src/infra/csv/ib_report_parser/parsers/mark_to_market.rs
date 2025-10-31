@@ -1,25 +1,13 @@
-use csv::StringRecord;
-
 use crate::infra::csv::ib_report_parser::records::MarkToMarketRecord;
 
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct MarkToMarketSection {
-    pub rows: Vec<MarkToMarketRecord>,
-}
+use super::Section;
 
-impl MarkToMarketSection {
-    pub fn from_records(records: &[StringRecord]) -> Self {
-        let rows = records
-            .iter()
-            .filter_map(MarkToMarketRecord::from_record)
-            .collect::<Vec<_>>();
-        Self { rows }
-    }
-}
+pub type MarkToMarketSection = Section<MarkToMarketRecord>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use csv::StringRecord;
 
     #[test]
     fn builds_mark_to_market_section() {

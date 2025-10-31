@@ -1,25 +1,13 @@
-use csv::StringRecord;
-
 use crate::infra::csv::ib_report_parser::records::OpenPositionRecord;
 
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct OpenPositionsSection {
-    pub rows: Vec<OpenPositionRecord>,
-}
+use super::Section;
 
-impl OpenPositionsSection {
-    pub fn from_records(records: &[StringRecord]) -> Self {
-        let rows = records
-            .iter()
-            .filter_map(OpenPositionRecord::from_record)
-            .collect::<Vec<_>>();
-        Self { rows }
-    }
-}
+pub type OpenPositionsSection = Section<OpenPositionRecord>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use csv::StringRecord;
 
     #[test]
     fn builds_open_positions_section() {
