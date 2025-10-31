@@ -5,12 +5,14 @@ use serde::{Deserialize, Serialize};
 use crate::error::BackendError;
 
 use super::summary::{PortfolioSummary, PositionSummary};
+use rust_decimal::Decimal;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetAllocation {
     pub symbol: String,
-    pub target_percent: f64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub target_percent: Decimal,
 }
 
 #[derive(Debug)]
@@ -18,16 +20,17 @@ pub struct ValidatedTargets(Vec<TargetAllocation>);
 
 impl ValidatedTargets {
     pub fn new(targets: Vec<TargetAllocation>) -> Result<Self, BackendError> {
-        const REBALANCE_TOLERANCE: f64 = 0.01;
-
         if targets.is_empty() {
             return Err(BackendError::Validation {
                 reason: "Target allocations are required to compute a rebalance plan.".to_string(),
             });
         }
 
-        let total_target_percent: f64 = targets.iter().map(|t| t.target_percent).sum();
-        if (total_target_percent - 100.0).abs() > REBALANCE_TOLERANCE {
+        let total_target_percent: Decimal = targets.iter().map(|t| t.target_percent).sum();
+        let tolerance = rust_decimal::dec!(0.01);
+        let hundred = rust_decimal::dec!(100);
+
+        if (total_target_percent - hundred).abs() > tolerance {
             return Err(BackendError::Validation {
                 reason: format!(
                     "Target allocations must sum to 100%, but they currently sum to {:.2}%.",
@@ -56,15 +59,25 @@ pub enum TradeAction {
 pub struct TradeInstruction {
     pub symbol: String,
     pub action: TradeAction,
-    pub value_delta: f64,
-    pub quantity_delta: Option<f64>,
-    pub price_used: Option<f64>,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub value_delta: Decimal,
+    #[serde(
+        with = "rust_decimal::serde::float_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub quantity_delta: Option<Decimal>,
+    #[serde(
+        with = "rust_decimal::serde::float_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub price_used: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RebalancePlan {
-    pub total_value: f64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_value: Decimal,
     pub trades: Vec<TradeInstruction>,
 }
 
@@ -72,7 +85,11 @@ pub struct PortfolioRebalancer;
 
 impl PortfolioRebalancer {
     pub fn calculate(summary: &PortfolioSummary, targets: &ValidatedTargets) -> RebalancePlan {
-        let total_value = summary.totals.market_value.max(0.0);
+        let total_value = if summary.totals.market_value < Decimal::ZERO {
+            Decimal::ZERO
+        } else {
+            summary.totals.market_value
+        };
         let positions = positions_map(&summary.positions);
 
         let (mut trades, mut handled) =
@@ -87,12 +104,13 @@ impl PortfolioRebalancer {
     }
 
     fn calculate_target_trades<'a>(
-        total_value: f64,
+        total_value: Decimal,
         positions: &HashMap<&'a str, &'a PositionSummary>,
         targets: &'a ValidatedTargets,
     ) -> (Vec<TradeInstruction>, HashSet<&'a str>) {
         let mut trades = Vec::new();
         let mut handled = HashSet::new();
+        let hundred = rust_decimal::dec!(100);
 
         for target in targets.as_slice() {
             let symbol = target.symbol.trim();
@@ -100,24 +118,26 @@ impl PortfolioRebalancer {
                 continue;
             }
 
-            let desired_value = total_value * (target.target_percent / 100.0);
+            let desired_value = total_value * (target.target_percent / hundred);
             let position = positions.get(symbol);
-            let current_value = position.map(|pos| pos.market_value).unwrap_or(0.0);
+            let current_value = position
+                .map(|pos| pos.market_value)
+                .unwrap_or(Decimal::ZERO);
             let delta_value = desired_value - current_value;
 
-            if delta_value.abs() <= f64::EPSILON {
+            if delta_value.is_zero() {
                 handled.insert(symbol);
                 continue;
             }
 
             let price_used = position
                 .map(|pos| pos.price)
-                .filter(|price| price.is_finite() && price.abs() > f64::EPSILON);
+                .filter(|price| !price.is_zero());
 
             let (quantity_delta, value_delta) = match price_used {
                 Some(price) => {
                     let rounded_qty = (delta_value / price).round();
-                    if rounded_qty.abs() <= f64::EPSILON {
+                    if rounded_qty.is_zero() {
                         handled.insert(symbol);
                         continue;
                     }
@@ -157,7 +177,7 @@ impl PortfolioRebalancer {
             .iter()
             .filter(|(symbol, _)| !handled.contains(**symbol))
         {
-            if position.market_value.abs() <= f64::EPSILON {
+            if position.market_value.is_zero() {
                 continue;
             }
 
@@ -193,47 +213,52 @@ mod tests {
     };
 
     fn summary_with_positions(positions: Vec<PositionSummary>) -> PortfolioSummary {
-        let market_value = positions.iter().map(|pos| pos.market_value).sum();
+        let market_value: Decimal = positions.iter().map(|pos| pos.market_value).sum();
         PortfolioSummary {
             statement: StatementInfo::default(),
             account_info: AccountInfo::default(),
             totals: PortfolioTotals {
                 market_value,
-                cost_basis: 0.0,
-                unrealized_pl: 0.0,
-                unrealized_pl_percent: 0.0,
+                cost_basis: Decimal::ZERO,
+                unrealized_pl: Decimal::ZERO,
+                unrealized_pl_percent: Decimal::ZERO,
                 total_positions: positions.len(),
             },
             positions,
         }
     }
 
-    fn position(symbol: &str, market_value: f64, price: f64) -> PositionSummary {
+    fn position(symbol: &str, market_value: Decimal, price: Decimal) -> PositionSummary {
+        let quantity = if price.is_zero() {
+            Decimal::ZERO
+        } else {
+            market_value / price
+        };
         PositionSummary {
             symbol: symbol.into(),
-            quantity: market_value / price,
+            quantity,
             price,
             market_value,
-            allocation_percent: 0.0,
-            unrealized_pl: 0.0,
-            roi_percent: 0.0,
+            allocation_percent: Decimal::ZERO,
+            unrealized_pl: Decimal::ZERO,
+            roi_percent: Decimal::ZERO,
         }
     }
 
     #[test]
     fn generates_buys_and_sells_for_targets() {
         let summary = summary_with_positions(vec![
-            position("VTI", 700.0, 70.0),
-            position("VXUS", 300.0, 60.0),
+            position("VTI", rust_decimal::dec!(700), rust_decimal::dec!(70)),
+            position("VXUS", rust_decimal::dec!(300), rust_decimal::dec!(60)),
         ]);
         let targets = ValidatedTargets::new(vec![
             TargetAllocation {
                 symbol: "VTI".into(),
-                target_percent: 60.0,
+                target_percent: rust_decimal::dec!(60),
             },
             TargetAllocation {
                 symbol: "VXUS".into(),
-                target_percent: 40.0,
+                target_percent: rust_decimal::dec!(40),
             },
         ])
         .unwrap();
@@ -253,10 +278,14 @@ mod tests {
 
     #[test]
     fn sells_positions_without_targets() {
-        let summary = summary_with_positions(vec![position("BND", 500.0, 80.0)]);
+        let summary = summary_with_positions(vec![position(
+            "BND",
+            rust_decimal::dec!(500),
+            rust_decimal::dec!(80),
+        )]);
         let targets = ValidatedTargets::new(vec![TargetAllocation {
             symbol: "VTI".into(),
-            target_percent: 100.0,
+            target_percent: rust_decimal::dec!(100),
         }])
         .unwrap();
         let plan = PortfolioRebalancer::calculate(&summary, &targets);

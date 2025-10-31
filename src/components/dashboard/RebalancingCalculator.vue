@@ -58,6 +58,33 @@ const formatPercentage = (value: number): string => {
   }).format(value / 100);
 };
 
+const DIFFERENCE_EPSILON = 0.005;
+
+const normalizeDifference = (difference: number): number => {
+  return Math.abs(difference) <= DIFFERENCE_EPSILON ? 0 : difference;
+};
+
+const getDifferenceSeverity = (targetPercent: number, currentPercent: number): 'success' | 'danger' | 'secondary' => {
+  const normalized = normalizeDifference(targetPercent - currentPercent);
+  if (normalized === 0) {
+    return 'secondary';
+  }
+  return normalized > 0 ? 'success' : 'danger';
+};
+
+const getDifferenceIcon = (targetPercent: number, currentPercent: number): string => {
+  const normalized = normalizeDifference(targetPercent - currentPercent);
+  if (normalized === 0) {
+    return 'pi pi-minus';
+  }
+  return normalized > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down';
+};
+
+const getDifferenceLabel = (targetPercent: number, currentPercent: number): string => {
+  const normalized = normalizeDifference(targetPercent - currentPercent);
+  return formatPercentage(Math.abs(normalized));
+};
+
 const enhancedTargets = computed(() => {
   return rebalancingState.targets.map(target => {
     const position = positions.value.find(p => p.symbol === target.symbol);
@@ -223,16 +250,15 @@ const targetTooltip = (symbol: string) => {
         <Column field="difference" header="Difference" :style="{ minWidth: '5rem' }">
           <template #body="{ data }">
             <Tag
-                :value="formatPercentage(data.targetPercent - data.currentPercent)"
-                :severity="data.targetPercent > data.currentPercent ? 'success' : data.targetPercent < data.currentPercent ? 'danger' : 'secondary'"
+                :value="getDifferenceLabel(data.targetPercent, data.currentPercent)"
+                :severity="getDifferenceSeverity(data.targetPercent, data.currentPercent)"
                 class="difference-tag"
             >
               <template #default>
                 <i
-                    :class="data.targetPercent > data.currentPercent ? 'pi pi-arrow-up' : data.targetPercent < data.currentPercent ? 'pi pi-arrow-down' : 'pi pi-minus'"
-                    class="difference-icon"
+                    :class="[getDifferenceIcon(data.targetPercent, data.currentPercent), 'difference-icon']"
                 ></i>
-                {{ formatPercentage(Math.abs(data.targetPercent - data.currentPercent)) }}
+                {{ getDifferenceLabel(data.targetPercent, data.currentPercent) }}
               </template>
             </Tag>
           </template>

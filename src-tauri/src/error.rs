@@ -1,5 +1,5 @@
+use rust_decimal::Error as DecimalError;
 use serde::Serialize;
-use std::num::ParseFloatError;
 use thiserror::Error;
 
 #[derive(Debug, Serialize)]
@@ -30,7 +30,7 @@ pub enum ParseError {
     #[error("CSV reading error")]
     Csv(#[from] csv::Error),
     #[error("Invalid number format: {0}")]
-    InvalidNumber(#[from] ParseFloatError),
+    InvalidNumber(#[from] DecimalError),
 }
 
 #[derive(Debug, Error)]
