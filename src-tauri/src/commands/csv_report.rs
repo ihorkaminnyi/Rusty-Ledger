@@ -40,14 +40,15 @@ pub fn parse_portfolio_summary<P: AsRef<Path>>(
     file_path: P,
 ) -> Result<PortfolioSummary, BackendError> {
     let path = file_path.as_ref();
-    if !path.exists() {
-        return Err(BackendError::FileNotFound {
-            path: path.to_string_lossy().into_owned(),
-        });
-    }
-
-    let raw_content =
-        fs::read_to_string(path).map_err(|source| BackendError::FileRead { source })?;
+    let raw_content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(BackendError::FileNotFound {
+                path: path.to_string_lossy().into_owned(),
+            })
+        }
+        Err(source) => return Err(BackendError::FileRead { source }),
+    };
 
     let report_view = IBCSVParser::parse_report_view(&raw_content)?;
     PortfolioSummary::try_from_report(report_view).map_err(BackendError::from)
