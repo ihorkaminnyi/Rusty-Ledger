@@ -20,8 +20,14 @@ impl RowKind {
     }
 }
 
-fn field(record: &StringRecord, idx: usize) -> Option<String> {
-    record.get(idx).map(|value| value.trim().to_string())
+trait StringRecordExt {
+    fn field(&self, idx: usize) -> Option<String>;
+}
+
+impl StringRecordExt for StringRecord {
+    fn field(&self, idx: usize) -> Option<String> {
+        self.get(idx).map(|value| value.trim().to_string())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -35,8 +41,8 @@ impl FieldRow {
     pub fn from_record(record: &StringRecord) -> Option<Self> {
         Some(Self {
             kind: RowKind::parse(record.get(1)),
-            name: field(record, 2)?,
-            value: field(record, 3).unwrap_or_default(),
+            name: record.field(2)?,
+            value: record.field(3).unwrap_or_default(),
         })
     }
 }
@@ -62,18 +68,18 @@ impl MarkToMarketRecord {
     pub fn from_record(record: &StringRecord) -> Option<Self> {
         Some(Self {
             kind: RowKind::parse(record.get(1)),
-            asset_category: field(record, 2)?,
-            symbol: field(record, 3).unwrap_or_default(),
-            prior_quantity: field(record, 4).unwrap_or_default(),
-            current_quantity: field(record, 5).unwrap_or_default(),
-            prior_price: field(record, 6).unwrap_or_default(),
-            current_price: field(record, 7).unwrap_or_default(),
-            pl_position: field(record, 8).unwrap_or_default(),
-            pl_transaction: field(record, 9).unwrap_or_default(),
-            pl_commissions: field(record, 10).unwrap_or_default(),
-            pl_other: field(record, 11).unwrap_or_default(),
-            pl_total: field(record, 12).unwrap_or_default(),
-            code: field(record, 13).unwrap_or_default(),
+            asset_category: record.field(2)?,
+            symbol: record.field(3).unwrap_or_default(),
+            prior_quantity: record.field(4).unwrap_or_default(),
+            current_quantity: record.field(5).unwrap_or_default(),
+            prior_price: record.field(6).unwrap_or_default(),
+            current_price: record.field(7).unwrap_or_default(),
+            pl_position: record.field(8).unwrap_or_default(),
+            pl_transaction: record.field(9).unwrap_or_default(),
+            pl_commissions: record.field(10).unwrap_or_default(),
+            pl_other: record.field(11).unwrap_or_default(),
+            pl_total: record.field(12).unwrap_or_default(),
+            code: record.field(13).unwrap_or_default(),
         })
     }
 }
@@ -99,18 +105,18 @@ impl OpenPositionRecord {
     pub fn from_record(record: &StringRecord) -> Option<Self> {
         Some(Self {
             kind: RowKind::parse(record.get(1)),
-            data_discriminator: field(record, 2).unwrap_or_default(),
-            asset_category: field(record, 3).unwrap_or_default(),
-            currency: field(record, 4).unwrap_or_default(),
-            symbol: field(record, 5).unwrap_or_default(),
-            quantity: field(record, 6).unwrap_or_default(),
-            multiplier: field(record, 7).unwrap_or_default(),
-            cost_price: field(record, 8).unwrap_or_default(),
-            cost_basis: field(record, 9).unwrap_or_default(),
-            close_price: field(record, 10).unwrap_or_default(),
-            value: field(record, 11).unwrap_or_default(),
-            unrealized_pl: field(record, 12).unwrap_or_default(),
-            code: field(record, 13).unwrap_or_default(),
+            data_discriminator: record.field(2).unwrap_or_default(),
+            asset_category: record.field(3).unwrap_or_default(),
+            currency: record.field(4).unwrap_or_default(),
+            symbol: record.field(5).unwrap_or_default(),
+            quantity: record.field(6).unwrap_or_default(),
+            multiplier: record.field(7).unwrap_or_default(),
+            cost_price: record.field(8).unwrap_or_default(),
+            cost_basis: record.field(9).unwrap_or_default(),
+            close_price: record.field(10).unwrap_or_default(),
+            value: record.field(11).unwrap_or_default(),
+            unrealized_pl: record.field(12).unwrap_or_default(),
+            code: record.field(13).unwrap_or_default(),
         })
     }
 }
