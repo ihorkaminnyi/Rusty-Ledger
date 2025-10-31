@@ -90,7 +90,11 @@ impl PortfolioRebalancer {
         } else {
             summary.totals.market_value
         };
-        let positions = positions_map(&summary.positions);
+        let positions: HashMap<&str, &PositionSummary> = summary
+            .positions
+            .iter()
+            .map(|position| (position.symbol.as_str(), position))
+            .collect();
 
         let (mut trades, mut handled) =
             Self::calculate_target_trades(total_value, &positions, targets);
@@ -195,13 +199,6 @@ impl PortfolioRebalancer {
 
         trades
     }
-}
-
-fn positions_map(positions: &[PositionSummary]) -> HashMap<&str, &PositionSummary> {
-    positions
-        .iter()
-        .map(|position| (position.symbol.as_str(), position))
-        .collect()
 }
 
 #[cfg(test)]
