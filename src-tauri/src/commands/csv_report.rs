@@ -4,13 +4,13 @@ use crate::{
     portfolio::summary::PortfolioSummary,
 };
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
 pub async fn open_file_dialog(
     app_handle: tauri::AppHandle,
-) -> Result<Option<String>, CommandError> {
+) -> Result<Option<PathBuf>, CommandError> {
     let file_path = app_handle
         .dialog()
         .file()
@@ -18,14 +18,21 @@ pub async fn open_file_dialog(
         .set_title("Select Interactive Brokers CSV Report")
         .blocking_pick_file();
 
-    match file_path {
-        Some(path) => Ok(Some(path.to_string())),
-        None => Ok(None),
-    }
+    file_path
+        .map(|path| {
+            path.simplified().into_path().map_err(|error| {
+                CommandError::new(
+                    "invalid_file_path",
+                    "The selected file path could not be resolved.",
+                )
+                .with_details(error.to_string())
+            })
+        })
+        .transpose()
 }
 
 #[tauri::command]
-pub async fn process_csv_report(file_path: String) -> Result<PortfolioSummary, CommandError> {
+pub async fn process_csv_report(file_path: PathBuf) -> Result<PortfolioSummary, CommandError> {
     parse_portfolio_summary(&file_path).map_err(CommandError::from)
 }
 
