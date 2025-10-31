@@ -33,6 +33,10 @@ pub enum ParseError {
     InvalidNumber(#[from] DecimalError),
 }
 
+#[derive(Debug, Error, Clone, Copy, PartialEq, Eq)]
+#[error("unknown IB report section")]
+pub struct ParseIBReportSectionError;
+
 #[derive(Debug, Error)]
 pub enum BackendError {
     #[error("File not found")]

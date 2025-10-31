@@ -1,7 +1,8 @@
 use csv::{ReaderBuilder, StringRecord};
+use std::str::FromStr;
 
 use crate::{
-    error::ParseError,
+    error::{ParseError, ParseIBReportSectionError},
     infra::csv::ib_report_parser::parsers::{
         AccountInformationSection, MarkToMarketSection, OpenPositionsSection, StatementSection,
     },
@@ -24,8 +25,12 @@ impl IBReportSection {
             IBReportSection::OpenPositions => "Open Positions",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for IBReportSection {
+    type Err = ParseIBReportSectionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let normalized = s.trim();
         [
             IBReportSection::Statement,
@@ -35,6 +40,7 @@ impl IBReportSection {
         ]
         .into_iter()
         .find(|section| section.as_str() == normalized)
+        .ok_or(ParseIBReportSectionError)
     }
 }
 
@@ -84,7 +90,7 @@ impl CSVSections {
 
             match (
                 first_field.is_empty(),
-                IBReportSection::from_str(first_field),
+                IBReportSection::from_str(first_field).ok(),
             ) {
                 (true, _) => {
                     if let Some(section) = current_section {
@@ -139,6 +145,7 @@ pub fn parse_sections(content: &str) -> Result<ParsedSections, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn as_str_matches_known_labels() {
@@ -157,22 +164,22 @@ mod tests {
     #[test]
     fn from_str_matches_known_sections() {
         assert_eq!(
-            IBReportSection::from_str("Statement"),
-            Some(IBReportSection::Statement)
+            IBReportSection::from_str("Statement").unwrap(),
+            IBReportSection::Statement
         );
         assert_eq!(
-            IBReportSection::from_str("Account Information"),
-            Some(IBReportSection::AccountInformation)
+            IBReportSection::from_str("Account Information").unwrap(),
+            IBReportSection::AccountInformation
         );
         assert_eq!(
-            IBReportSection::from_str("Mark-to-Market Performance Summary"),
-            Some(IBReportSection::MarkToMarketPerformanceSummary)
+            IBReportSection::from_str("Mark-to-Market Performance Summary").unwrap(),
+            IBReportSection::MarkToMarketPerformanceSummary
         );
         assert_eq!(
-            IBReportSection::from_str("Open Positions"),
-            Some(IBReportSection::OpenPositions)
+            IBReportSection::from_str("Open Positions").unwrap(),
+            IBReportSection::OpenPositions
         );
-        assert_eq!(IBReportSection::from_str("Unknown Section"), None);
+        assert!(IBReportSection::from_str("Unknown Section").is_err());
     }
 
     #[test]
