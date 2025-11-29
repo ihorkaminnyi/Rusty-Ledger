@@ -44,7 +44,7 @@ impl FromStr for IBReportSection {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CSVSections {
     pub statement: Vec<StringRecord>,
     pub account_info: Vec<StringRecord>,
@@ -53,15 +53,6 @@ pub struct CSVSections {
 }
 
 impl CSVSections {
-    pub fn new() -> Self {
-        Self {
-            statement: Vec::new(),
-            account_info: Vec::new(),
-            mark_to_market: Vec::new(),
-            open_positions: Vec::new(),
-        }
-    }
-
     fn push_record(&mut self, section: IBReportSection, record: &StringRecord) {
         let target = match section {
             IBReportSection::Statement => &mut self.statement,
@@ -73,7 +64,7 @@ impl CSVSections {
     }
 
     pub fn parse(content: &str) -> Result<Self, ParseError> {
-        let mut sections = CSVSections::new();
+        let mut sections = CSVSections::default();
         let mut current_section: Option<IBReportSection> = None;
         let mut reader = ReaderBuilder::new()
             .has_headers(false)
