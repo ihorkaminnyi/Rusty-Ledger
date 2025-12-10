@@ -78,13 +78,19 @@ pub struct TradeInstruction {
 pub struct RebalancePlan {
     #[serde(with = "rust_decimal::serde::float")]
     pub total_value: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub deposit_amount: Decimal,
     pub trades: Vec<TradeInstruction>,
 }
 
 pub struct PortfolioRebalancer;
 
 impl PortfolioRebalancer {
-    pub fn calculate(summary: &PortfolioSummary, targets: &ValidatedTargets) -> RebalancePlan {
+    pub fn calculate(
+        summary: &PortfolioSummary,
+        targets: &ValidatedTargets,
+        deposit_amount: Decimal,
+    ) -> RebalancePlan {
         let total_value = if summary.totals.market_value < Decimal::ZERO {
             Decimal::ZERO
         } else {
@@ -103,6 +109,7 @@ impl PortfolioRebalancer {
 
         RebalancePlan {
             total_value,
+            deposit_amount,
             trades,
         }
     }
@@ -260,7 +267,7 @@ mod tests {
         ])
         .unwrap();
 
-        let plan = PortfolioRebalancer::calculate(&summary, &targets);
+        let plan = PortfolioRebalancer::calculate(&summary, &targets, Decimal::ZERO);
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
@@ -285,7 +292,7 @@ mod tests {
             target_percent: rust_decimal::dec!(100),
         }])
         .unwrap();
-        let plan = PortfolioRebalancer::calculate(&summary, &targets);
+        let plan = PortfolioRebalancer::calculate(&summary, &targets, Decimal::ZERO);
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
