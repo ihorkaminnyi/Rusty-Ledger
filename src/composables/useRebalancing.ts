@@ -1,5 +1,10 @@
 import { computed, reactive, readonly } from "vue";
-import type { TargetAllocation, TradeInstruction } from "../types/rebalance.ts";
+import {
+  DEFAULT_REBALANCE_STRATEGY,
+  type RebalanceStrategy,
+  type TargetAllocation,
+  type TradeInstruction,
+} from "../types/rebalance.ts";
 import { useAppStore } from "../stores/appStore.ts";
 import { TauriService, isTauriCommandError } from "../services/tauri.ts";
 import { type NonNegativeNumber, nonNegative } from "../types/numeric.ts";
@@ -8,6 +13,7 @@ interface RebalancingState {
   targets: TargetAllocation[];
   actions: TradeInstruction[];
   depositAmount: NonNegativeNumber;
+  rebalanceStrategy: RebalanceStrategy;
   isCalculating: boolean;
   hasCalculated: boolean;
 }
@@ -26,6 +32,7 @@ export function useRebalancing() {
     targets: [],
     actions: [],
     depositAmount: nonNegative(0),
+    rebalanceStrategy: DEFAULT_REBALANCE_STRATEGY,
     isCalculating: false,
     hasCalculated: false,
   });

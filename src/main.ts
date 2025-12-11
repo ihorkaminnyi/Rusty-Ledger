@@ -13,6 +13,7 @@ import Toast from "primevue/toast";
 import ToastService from "primevue/toastservice";
 import InputNumber from "primevue/inputnumber";
 import FloatLabel from "primevue/floatlabel";
+import SelectButton from "primevue/selectbutton";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -38,5 +39,6 @@ app.component("Toast", Toast);
 app.directive("tooltip", Tooltip);
 app.component("InputNumber", InputNumber);
 app.component("FloatLabel", FloatLabel);
+app.component("SelectButton", SelectButton);
 
 app.mount("#app");

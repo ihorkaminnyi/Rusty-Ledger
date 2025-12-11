@@ -10,6 +10,7 @@ import Tag from "primevue/tag";
 import Dialog from "primevue/dialog";
 import { useRebalancing } from "../../composables/useRebalancing";
 import { useAppStore } from "../../stores/appStore";
+import { REBALANCE_STRATEGIES, RebalanceStrategy } from "../../types/rebalance";
 
 const appStore = useAppStore();
 const { portfolio } = storeToRefs(appStore);
@@ -194,13 +195,13 @@ const targetTooltip = (symbol: string) => {
     }
     return messages.join("\n");
 };
+
+const rebalanceStrategies = ref<RebalanceStrategy[]>([...REBALANCE_STRATEGIES]);
 </script>
 
 <template>
     <div class="flex flex-column gap-4">
-        <div
-            class="flex justify-content-between align-items-center px-3 pt-1 pb-0"
-        >
+        <div class="flex justify-content-between align-items-center">
             <div class="flex align-items-center gap-3">
                 <h5 class="text-lg font-semibold text-700 m-0">
                     Target Allocation
@@ -223,7 +224,7 @@ const targetTooltip = (symbol: string) => {
             </div>
         </div>
 
-        <div class="flex flex-column gap-4">
+        <div class="flex justify-content-between gap-4">
             <FloatLabel variant="on">
                 <InputNumber
                     v-model.number="rebalancingState.depositAmount"
@@ -232,10 +233,15 @@ const targetTooltip = (symbol: string) => {
                     currency="USD"
                     locale="en-US"
                     inputId="deposit"
-                    fluid
                 />
                 <label for="deposit">Top-up amount</label>
             </FloatLabel>
+            <div class="card flex justify-center">
+                <SelectButton
+                    v-model="rebalancingState.rebalanceStrategy"
+                    :options="rebalanceStrategies"
+                />
+            </div>
         </div>
 
         <div class="flex flex-column">
