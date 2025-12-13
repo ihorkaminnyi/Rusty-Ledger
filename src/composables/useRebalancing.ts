@@ -124,6 +124,7 @@ export function useRebalancing() {
         reportFilePath.value,
         state.targets,
         state.depositAmount,
+        state.rebalanceStrategy,
       );
       state.actions = plan.trades;
       state.hasCalculated = true;
@@ -275,6 +276,14 @@ export function useRebalancing() {
     });
   };
 
+  const setDepositAmount = (amount: number) => {
+    state.depositAmount = nonNegative(amount);
+  };
+
+  const setRebalanceStrategy = (strategy: RebalanceStrategy) => {
+    state.rebalanceStrategy = strategy;
+  };
+
   return {
     state: readonly(state),
     totalTargetPercent,
@@ -292,5 +301,7 @@ export function useRebalancing() {
     formatActions,
     validateTargets,
     autoBalanceTargets,
+    setDepositAmount,
+    setRebalanceStrategy,
   };
 }

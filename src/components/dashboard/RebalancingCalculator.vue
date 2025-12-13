@@ -10,13 +10,19 @@ import Tag from "primevue/tag";
 import Dialog from "primevue/dialog";
 import { useRebalancing } from "../../composables/useRebalancing";
 import { useAppStore } from "../../stores/appStore";
-import { REBALANCE_STRATEGIES, RebalanceStrategy } from "../../types/rebalance";
+import {
+    DEFAULT_REBALANCE_STRATEGY,
+    REBALANCE_STRATEGIES,
+    RebalanceStrategy,
+} from "../../types/rebalance";
+import { nonNegative } from "../../types/numeric";
 
 const appStore = useAppStore();
 const { portfolio } = storeToRefs(appStore);
 const positions = computed(() => portfolio.value?.positions ?? []);
 const accountInfo = computed(() => portfolio.value?.accountInfo);
 const totalValue = computed(() => portfolio.value?.totals.marketValue ?? 0);
+
 const {
     state: rebalancingState,
     totalTargetPercent,
@@ -28,9 +34,14 @@ const {
     resetTargets,
     formatActions,
     validateTargets,
+    setDepositAmount,
+    setRebalanceStrategy,
 } = useRebalancing();
 
 const showRebalancingDialog = ref(false);
+const depositAmount = ref(0);
+const rebalanceStrategies = ref<RebalanceStrategy[]>([...REBALANCE_STRATEGIES]);
+const rebalanceStrategy = ref<RebalanceStrategy>(DEFAULT_REBALANCE_STRATEGY);
 
 watch(
     positions,
@@ -51,6 +62,14 @@ watch(
         showRebalancingDialog.value = isCalculated;
     },
 );
+
+watch(depositAmount, (newValue) => {
+    setDepositAmount(nonNegative(newValue));
+});
+
+watch(rebalanceStrategy, (newValue) => {
+    setRebalanceStrategy(newValue);
+});
 
 const formatCurrency = (value: number, currency: string = "USD"): string => {
     return new Intl.NumberFormat("en-US", {
@@ -195,8 +214,6 @@ const targetTooltip = (symbol: string) => {
     }
     return messages.join("\n");
 };
-
-const rebalanceStrategies = ref<RebalanceStrategy[]>([...REBALANCE_STRATEGIES]);
 </script>
 
 <template>
@@ -227,7 +244,7 @@ const rebalanceStrategies = ref<RebalanceStrategy[]>([...REBALANCE_STRATEGIES]);
         <div class="flex justify-content-between gap-4">
             <FloatLabel variant="on">
                 <InputNumber
-                    v-model.number="rebalancingState.depositAmount"
+                    v-model.number="depositAmount"
                     mode="currency"
                     :min="0"
                     currency="USD"
@@ -238,7 +255,7 @@ const rebalanceStrategies = ref<RebalanceStrategy[]>([...REBALANCE_STRATEGIES]);
             </FloatLabel>
             <div class="card flex justify-center">
                 <SelectButton
-                    v-model="rebalancingState.rebalanceStrategy"
+                    v-model="rebalanceStrategy"
                     :options="rebalanceStrategies"
                 />
             </div>

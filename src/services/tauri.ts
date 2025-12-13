@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { PortfolioSummary } from "../types/portfolio.ts";
-import type { RebalancePlan, TargetAllocation } from "../types/rebalance.ts";
+import type {
+  RebalancePlan,
+  RebalanceStrategy,
+  TargetAllocation,
+} from "../types/rebalance.ts";
 import { NonNegativeNumber } from "../types/numeric.ts";
 
 interface CommandErrorPayload {
@@ -120,6 +124,7 @@ export class TauriService {
     filePath: string,
     targets: TargetAllocation[],
     depositAmount: NonNegativeNumber,
+    rebalanceStrategy: RebalanceStrategy,
   ): Promise<RebalancePlan> {
     this.ensureTauriAvailable();
     try {
@@ -127,6 +132,7 @@ export class TauriService {
         filePath,
         targets,
         depositAmount,
+        rebalanceStrategy,
       });
     } catch (error) {
       throw this.mapError(error, "Failed to calculate rebalancing plan.");
