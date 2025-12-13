@@ -54,6 +54,14 @@ pub enum TradeAction {
     Sell,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RebalanceStrategy {
+    #[serde(rename = "Buy Only")]
+    BuyOnly,
+    #[serde(rename = "Full Rebalance")]
+    Full,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TradeInstruction {
@@ -81,6 +89,7 @@ pub struct RebalancePlan {
     #[serde(with = "rust_decimal::serde::float")]
     pub deposit_amount: Decimal,
     pub trades: Vec<TradeInstruction>,
+    pub rebalance_strategy: RebalanceStrategy,
 }
 
 pub struct PortfolioRebalancer;
@@ -90,6 +99,7 @@ impl PortfolioRebalancer {
         summary: &PortfolioSummary,
         targets: &ValidatedTargets,
         deposit_amount: Decimal,
+        rebalance_strategy: RebalanceStrategy,
     ) -> RebalancePlan {
         let total_value = if summary.totals.market_value < Decimal::ZERO {
             Decimal::ZERO
@@ -111,6 +121,7 @@ impl PortfolioRebalancer {
             total_value,
             deposit_amount,
             trades,
+            rebalance_strategy,
         }
     }
 
