@@ -112,9 +112,33 @@ impl PortfolioRebalancer {
             .map(|position| (position.symbol.as_str(), position))
             .collect();
 
+        match rebalance_strategy {
+            RebalanceStrategy::BuyOnly => Self::calculate_buy_only(),
+            RebalanceStrategy::Full => Self::calculate_full_rebalance(
+                total_value,
+                &positions,
+                targets,
+                deposit_amount,
+                rebalance_strategy,
+            ),
+        }
+    }
+
+    fn calculate_buy_only() -> RebalancePlan {
+        // TODO: calculate only buy trades
+        todo!()
+    }
+
+    fn calculate_full_rebalance(
+        total_value: Decimal,
+        positions: &HashMap<&str, &PositionSummary>,
+        targets: &ValidatedTargets,
+        deposit_amount: Decimal,
+        rebalance_strategy: RebalanceStrategy,
+    ) -> RebalancePlan {
         let (mut trades, mut handled) =
-            Self::calculate_target_trades(total_value, &positions, targets);
-        let sell_off_trades = Self::calculate_sell_off_trades(&positions, &mut handled);
+            Self::calculate_target_trades(total_value, positions, targets);
+        let sell_off_trades = Self::calculate_sell_off_trades(positions, &mut handled);
         trades.extend(sell_off_trades);
 
         RebalancePlan {
