@@ -278,7 +278,12 @@ mod tests {
         ])
         .unwrap();
 
-        let plan = PortfolioRebalancer::calculate(&summary, &targets, Decimal::ZERO);
+        let plan = PortfolioRebalancer::calculate(
+            &summary,
+            &targets,
+            Decimal::ZERO,
+            RebalanceStrategy::Full,
+        );
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
@@ -303,7 +308,12 @@ mod tests {
             target_percent: rust_decimal::dec!(100),
         }])
         .unwrap();
-        let plan = PortfolioRebalancer::calculate(&summary, &targets, Decimal::ZERO);
+        let plan = PortfolioRebalancer::calculate(
+            &summary,
+            &targets,
+            Decimal::ZERO,
+            RebalanceStrategy::Full,
+        );
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
