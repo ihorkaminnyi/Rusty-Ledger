@@ -113,7 +113,9 @@ impl PortfolioRebalancer {
             .collect();
 
         match rebalance_strategy {
-            RebalanceStrategy::BuyOnly => Self::calculate_buy_only(),
+            RebalanceStrategy::BuyOnly => {
+                Self::calculate_buy_only(total_value, &positions, targets, deposit_amount)
+            }
             RebalanceStrategy::Full => Self::calculate_full_rebalance(
                 total_value,
                 &positions,
@@ -124,9 +126,92 @@ impl PortfolioRebalancer {
         }
     }
 
-    fn calculate_buy_only() -> RebalancePlan {
-        // TODO: calculate only buy trades
-        todo!()
+    fn calculate_buy_only(
+        current_total_value: Decimal,
+        positions: &HashMap<&str, &PositionSummary>,
+        targets: &ValidatedTargets,
+        deposit_amount: Decimal,
+    ) -> RebalancePlan {
+        let mut trades = Vec::new();
+        let hundred = rust_decimal::dec!(100);
+
+        let projected_total_value = current_total_value + deposit_amount;
+
+        struct DeficitInfo<'a> {
+            symbol: &'a str,
+            deficit: Decimal,
+            price: Decimal,
+        }
+
+        let mut deficits = Vec::new();
+        let mut total_deficit = Decimal::ZERO;
+
+        for target in targets.as_slice() {
+            let symbol = target.symbol.trim();
+            if symbol.is_empty() {
+                continue;
+            }
+
+            let target_ideal_value = projected_total_value * (target.target_percent / hundred);
+
+            let (current_value, price) = positions
+                .get(symbol)
+                .map(|p| (p.market_value, p.price))
+                .unwrap_or((Decimal::ZERO, Decimal::ZERO));
+
+            if price.is_zero() {
+                continue;
+            }
+
+            let deficit = if target_ideal_value > current_value {
+                target_ideal_value - current_value
+            } else {
+                Decimal::ZERO
+            };
+
+            if deficit > Decimal::ZERO {
+                deficits.push(DeficitInfo {
+                    symbol,
+                    deficit,
+                    price,
+                });
+                total_deficit += deficit;
+            }
+        }
+
+        if total_deficit > Decimal::ZERO && deposit_amount > Decimal::ZERO {
+            for item in deficits {
+                let weight = item.deficit / total_deficit;
+                let amount_to_invest = deposit_amount * weight;
+
+                if amount_to_invest.is_zero() {
+                    continue;
+                }
+
+                // TODO: Додати підтримку дробових акцій, якщо брокер дозволяє
+                let quantity = (amount_to_invest / item.price).round();
+
+                if quantity.is_zero() {
+                    continue;
+                }
+
+                let value_delta = quantity * item.price;
+
+                trades.push(TradeInstruction {
+                    symbol: item.symbol.to_string(),
+                    action: TradeAction::Buy,
+                    value_delta,
+                    quantity_delta: Some(quantity),
+                    price_used: Some(item.price),
+                });
+            }
+        }
+        RebalancePlan {
+            total_value: current_total_value,
+            deposit_amount,
+            trades,
+            rebalance_strategy: RebalanceStrategy::BuyOnly,
+        }
     }
 
     fn calculate_full_rebalance(
