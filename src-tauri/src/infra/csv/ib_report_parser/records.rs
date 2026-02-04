@@ -20,6 +20,31 @@ impl RowKind {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum AssetCategory {
+    CategoryHeader,
+    Stocks,
+    Forex,
+    Total,
+    TotalAllAssets,
+    EquityAndIndexOptions,
+    Other,
+}
+
+impl AssetCategory {
+    pub fn parse(value: Option<&str>) -> Self {
+        match value.unwrap_or_default().trim().to_lowercase().as_str() {
+            "asset category" => AssetCategory::CategoryHeader,
+            "stocks" => AssetCategory::Stocks,
+            "forex" => AssetCategory::Forex,
+            "total" => AssetCategory::Total,
+            "total (all assets)" => AssetCategory::TotalAllAssets,
+            "equity and index options" => AssetCategory::EquityAndIndexOptions,
+            _ => AssetCategory::Other,
+        }
+    }
+}
+
 trait StringRecordExt {
     fn field(&self, idx: usize) -> Option<String>;
 }
@@ -50,7 +75,7 @@ impl FieldRow {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MarkToMarketRecord {
     pub kind: RowKind,
-    pub asset_category: String,
+    pub asset_category: AssetCategory,
     pub symbol: String,
     pub prior_quantity: String,
     pub current_quantity: String,
@@ -66,9 +91,16 @@ pub struct MarkToMarketRecord {
 
 impl MarkToMarketRecord {
     pub fn from_record(record: &StringRecord) -> Option<Self> {
+        let asset_category = AssetCategory::parse(record.get(2));
+
+        // TODO: handle options later
+        if asset_category == AssetCategory::EquityAndIndexOptions {
+            return None;
+        }
+
         Some(Self {
             kind: RowKind::parse(record.get(1)),
-            asset_category: record.field(2)?,
+            asset_category,
             symbol: record.field(3).unwrap_or_default(),
             prior_quantity: record.field(4).unwrap_or_default(),
             current_quantity: record.field(5).unwrap_or_default(),
@@ -88,7 +120,7 @@ impl MarkToMarketRecord {
 pub struct OpenPositionRecord {
     pub kind: RowKind,
     pub data_discriminator: String,
-    pub asset_category: String,
+    pub asset_category: AssetCategory,
     pub currency: String,
     pub symbol: String,
     pub quantity: String,
@@ -103,10 +135,17 @@ pub struct OpenPositionRecord {
 
 impl OpenPositionRecord {
     pub fn from_record(record: &StringRecord) -> Option<Self> {
+        let asset_category = AssetCategory::parse(record.get(3));
+
+        // TODO: Handle options later
+        if asset_category == AssetCategory::EquityAndIndexOptions {
+            return None;
+        }
+
         Some(Self {
             kind: RowKind::parse(record.get(1)),
             data_discriminator: record.field(2).unwrap_or_default(),
-            asset_category: record.field(3).unwrap_or_default(),
+            asset_category,
             currency: record.field(4).unwrap_or_default(),
             symbol: record.field(5).unwrap_or_default(),
             quantity: record.field(6).unwrap_or_default(),
@@ -153,7 +192,7 @@ mod tests {
             "",
         ]);
         let parsed = MarkToMarketRecord::from_record(&record).expect("parsed");
-        assert_eq!(parsed.asset_category, "Stocks");
+        assert_eq!(parsed.asset_category, AssetCategory::Stocks);
         assert_eq!(parsed.symbol, "AAPL");
         assert_eq!(parsed.pl_total, "1.2");
     }
