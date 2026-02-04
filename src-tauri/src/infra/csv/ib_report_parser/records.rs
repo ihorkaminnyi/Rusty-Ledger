@@ -216,7 +216,7 @@ mod tests {
             "",
         ]);
         let parsed = OpenPositionRecord::from_record(&record).expect("parsed");
-        assert_eq!(parsed.asset_category, "Stocks");
+        assert_eq!(parsed.asset_category, AssetCategory::Stocks);
         assert_eq!(parsed.currency, "USD");
         assert_eq!(parsed.unrealized_pl, "253.73");
     }
