@@ -221,8 +221,10 @@ impl PortfolioRebalancer {
         deposit_amount: Decimal,
         rebalance_strategy: RebalanceStrategy,
     ) -> RebalancePlan {
+        let projected_total_value = total_value + deposit_amount;
+
         let (mut trades, mut handled) =
-            Self::calculate_target_trades(total_value, positions, targets);
+            Self::calculate_target_trades(projected_total_value, positions, targets);
         let sell_off_trades = Self::calculate_sell_off_trades(positions, &mut handled);
         trades.extend(sell_off_trades);
 
