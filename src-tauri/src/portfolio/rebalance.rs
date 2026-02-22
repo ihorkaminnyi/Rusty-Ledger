@@ -54,6 +54,14 @@ pub enum TradeAction {
     Sell,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RebalanceStrategy {
+    #[serde(rename = "Buy Only")]
+    BuyOnly,
+    #[serde(rename = "Full Rebalance")]
+    Full,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TradeInstruction {
@@ -78,13 +86,21 @@ pub struct TradeInstruction {
 pub struct RebalancePlan {
     #[serde(with = "rust_decimal::serde::float")]
     pub total_value: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub deposit_amount: Decimal,
     pub trades: Vec<TradeInstruction>,
+    pub rebalance_strategy: RebalanceStrategy,
 }
 
 pub struct PortfolioRebalancer;
 
 impl PortfolioRebalancer {
-    pub fn calculate(summary: &PortfolioSummary, targets: &ValidatedTargets) -> RebalancePlan {
+    pub fn calculate(
+        summary: &PortfolioSummary,
+        targets: &ValidatedTargets,
+        deposit_amount: Decimal,
+        rebalance_strategy: RebalanceStrategy,
+    ) -> RebalancePlan {
         let total_value = if summary.totals.market_value < Decimal::ZERO {
             Decimal::ZERO
         } else {
@@ -96,14 +112,127 @@ impl PortfolioRebalancer {
             .map(|position| (position.symbol.as_str(), position))
             .collect();
 
+        match rebalance_strategy {
+            RebalanceStrategy::BuyOnly => {
+                Self::calculate_buy_only(total_value, &positions, targets, deposit_amount)
+            }
+            RebalanceStrategy::Full => Self::calculate_full_rebalance(
+                total_value,
+                &positions,
+                targets,
+                deposit_amount,
+                rebalance_strategy,
+            ),
+        }
+    }
+
+    fn calculate_buy_only(
+        current_total_value: Decimal,
+        positions: &HashMap<&str, &PositionSummary>,
+        targets: &ValidatedTargets,
+        deposit_amount: Decimal,
+    ) -> RebalancePlan {
+        let mut trades = Vec::new();
+        let hundred = rust_decimal::dec!(100);
+
+        let projected_total_value = current_total_value + deposit_amount;
+
+        struct DeficitInfo<'a> {
+            symbol: &'a str,
+            deficit: Decimal,
+            price: Decimal,
+        }
+
+        let mut deficits = Vec::new();
+        let mut total_deficit = Decimal::ZERO;
+
+        for target in targets.as_slice() {
+            let symbol = target.symbol.trim();
+            if symbol.is_empty() {
+                continue;
+            }
+
+            let target_ideal_value = projected_total_value * (target.target_percent / hundred);
+
+            let (current_value, price) = positions
+                .get(symbol)
+                .map(|p| (p.market_value, p.price))
+                .unwrap_or((Decimal::ZERO, Decimal::ZERO));
+
+            if price.is_zero() {
+                continue;
+            }
+
+            let deficit = if target_ideal_value > current_value {
+                target_ideal_value - current_value
+            } else {
+                Decimal::ZERO
+            };
+
+            if deficit > Decimal::ZERO {
+                deficits.push(DeficitInfo {
+                    symbol,
+                    deficit,
+                    price,
+                });
+                total_deficit += deficit;
+            }
+        }
+
+        if total_deficit > Decimal::ZERO && deposit_amount > Decimal::ZERO {
+            for item in deficits {
+                let weight = item.deficit / total_deficit;
+                let amount_to_invest = deposit_amount * weight;
+
+                if amount_to_invest.is_zero() {
+                    continue;
+                }
+
+                // TODO: Додати підтримку дробових акцій, якщо брокер дозволяє
+                let quantity = (amount_to_invest / item.price).round();
+
+                if quantity.is_zero() {
+                    continue;
+                }
+
+                let value_delta = quantity * item.price;
+
+                trades.push(TradeInstruction {
+                    symbol: item.symbol.to_string(),
+                    action: TradeAction::Buy,
+                    value_delta,
+                    quantity_delta: Some(quantity),
+                    price_used: Some(item.price),
+                });
+            }
+        }
+        RebalancePlan {
+            total_value: current_total_value,
+            deposit_amount,
+            trades,
+            rebalance_strategy: RebalanceStrategy::BuyOnly,
+        }
+    }
+
+    fn calculate_full_rebalance(
+        total_value: Decimal,
+        positions: &HashMap<&str, &PositionSummary>,
+        targets: &ValidatedTargets,
+        deposit_amount: Decimal,
+        rebalance_strategy: RebalanceStrategy,
+    ) -> RebalancePlan {
+        let projected_total_value = total_value + deposit_amount;
+
         let (mut trades, mut handled) =
-            Self::calculate_target_trades(total_value, &positions, targets);
-        let sell_off_trades = Self::calculate_sell_off_trades(&positions, &mut handled);
+            Self::calculate_target_trades(projected_total_value, positions, targets);
+        let sell_off_trades = Self::calculate_sell_off_trades(positions, &mut handled);
         trades.extend(sell_off_trades);
 
         RebalancePlan {
             total_value,
+            deposit_amount,
             trades,
+            rebalance_strategy,
         }
     }
 
@@ -260,7 +389,12 @@ mod tests {
         ])
         .unwrap();
 
-        let plan = PortfolioRebalancer::calculate(&summary, &targets);
+        let plan = PortfolioRebalancer::calculate(
+            &summary,
+            &targets,
+            Decimal::ZERO,
+            RebalanceStrategy::Full,
+        );
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
@@ -285,7 +419,12 @@ mod tests {
             target_percent: rust_decimal::dec!(100),
         }])
         .unwrap();
-        let plan = PortfolioRebalancer::calculate(&summary, &targets);
+        let plan = PortfolioRebalancer::calculate(
+            &summary,
+            &targets,
+            Decimal::ZERO,
+            RebalanceStrategy::Full,
+        );
 
         assert_eq!(plan.trades.len(), 2);
         assert!(plan
