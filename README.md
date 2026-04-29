@@ -47,3 +47,25 @@ Rusty Ledger currently supports account statements from Interactive Brokers, the
 - Run `npm run dev` to start the Vite dev server alongside the Tauri shell.
 - Run `npm run build` for a production-ready frontend build.
 - Run `npm run tauri build` to produce a packaged desktop application.
+
+## SQLx Offline Cache Workflow
+
+SQLx validates `query!` / `query_as!` macros at compile time against a real database. The runtime DB lives in the OS app data directory, but a local `dev.db` is needed for development builds.
+
+**One-time setup** (run from `src-tauri/`):
+
+1. Install `sqlx-cli` if you haven't already:
+   - `cargo install sqlx-cli --no-default-features --features sqlite`
+2. Copy the example env file:
+   - `cp .env.example .env`
+3. Create the local dev database and apply migrations:
+   - `sqlx migrate run --source src/infra/persistence/migrations --database-url "sqlite://$(pwd)/dev.db?mode=rwc"`
+
+**After adding a new migration**, re-run step 3 to keep `dev.db` up to date.
+
+**Regenerate the SQLx offline cache** (run from `src-tauri/`):
+- `cargo sqlx prepare -- --all-targets`
+- Commit the updated `src-tauri/.sqlx` directory to the repository.
+
+**CI or builds without a database:**
+- `SQLX_OFFLINE=true cargo check`

@@ -23,7 +23,7 @@ pub struct StatementInfo {
     pub broker_name: Option<String>,
     pub broker_address: Option<String>,
     pub period: Option<String>,
-    pub when_generated: Option<String>,
+    pub generated_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -82,7 +82,7 @@ fn statement_rows_to_info(rows: Vec<FieldRow>) -> StatementInfo {
     mapping.insert("broker_name", &mut info.broker_name);
     mapping.insert("broker_address", &mut info.broker_address);
     mapping.insert("period", &mut info.period);
-    mapping.insert("when_generated", &mut info.when_generated);
+    mapping.insert("generated_at", &mut info.generated_at);
 
     apply_field_rows(rows, &mut mapping);
     info

@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local SQLx / SQLite development config
+src-tauri/.env
+src-tauri/*.db
+src-tauri/*.db-shm
+src-tauri/*.db-wal
+
+# SQLx offline query cache should be committed
+!src-tauri/.sqlx/
+!src-tauri/.sqlx/**

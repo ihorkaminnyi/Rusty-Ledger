@@ -38,6 +38,15 @@ pub enum ParseError {
 pub struct ParseIBReportSectionError;
 
 #[derive(Debug, Error)]
+pub enum DbError {
+    #[error("Failed to connect to the database: {0}")]
+    Connect(#[source] sqlx::Error),
+
+    #[error("Database migration failed: {0}")]
+    Migrate(#[from] sqlx::migrate::MigrateError),
+}
+
+#[derive(Debug, Error)]
 pub enum BackendError {
     #[error("File not found")]
     FileNotFound { path: String },
@@ -56,6 +65,12 @@ pub enum BackendError {
 
     #[error("Validation failed")]
     Validation { reason: String },
+
+    #[error("Database error")]
+    Db {
+        #[from]
+        source: DbError,
+    },
 }
 
 impl From<BackendError> for CommandError {
@@ -76,6 +91,7 @@ impl From<BackendError> for CommandError {
                     .with_details(source.to_string())
             }
             BackendError::Validation { reason } => CommandError::new("validation_failed", reason),
+            BackendError::Db { source } => CommandError::new("db_error", source.to_string()),
         }
     }
 }

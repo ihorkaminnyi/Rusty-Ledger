@@ -24,3 +24,5 @@ csv = "1"
 heck = "0.5"
 thiserror = "2"
 rust_decimal = { version = "1", features = ["serde", "serde-with-float", "macros"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-none", "sqlite", "macros"] }
+tokio = { version = "1", features = ["full"] }
