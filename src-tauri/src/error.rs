@@ -42,6 +42,19 @@ pub enum DbError {
     #[error("Failed to connect to the database: {0}")]
     Connect(#[source] sqlx::Error),
 
+    #[error("Database query failed: {0}")]
+    Query(#[source] sqlx::Error),
+
+    #[error("Invalid decimal stored in database field `{field}`")]
+    InvalidDecimal {
+        field: &'static str,
+        #[source]
+        source: DecimalError,
+    },
+
+    #[error("Invalid database value: {0}")]
+    InvalidData(String),
+
     #[error("Database migration failed: {0}")]
     Migrate(#[from] sqlx::migrate::MigrateError),
 }

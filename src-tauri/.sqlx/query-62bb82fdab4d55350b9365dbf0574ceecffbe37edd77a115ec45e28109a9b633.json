@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                INSERT INTO portfolio_positions (\n                    summary_id,\n                    symbol,\n                    quantity,\n                    price,\n                    market_value,\n                    allocation_percent,\n                    unrealized_pl,\n                    roi_percent\n                )\n                VALUES (?, ?, ?, ?, ?, ?, ?, ?)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "62bb82fdab4d55350b9365dbf0574ceecffbe37edd77a115ec45e28109a9b633"
+}
