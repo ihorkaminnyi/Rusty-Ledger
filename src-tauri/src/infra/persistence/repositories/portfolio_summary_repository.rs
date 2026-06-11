@@ -5,10 +5,7 @@ use sqlx::{Sqlite, Transaction};
 
 use crate::{
     error::DbError,
-    infra::csv::ib_report_parser::{
-        parsers::statement,
-        view::{AccountInfo, StatementInfo},
-    },
+    infra::csv::ib_report_parser::view::{AccountInfo, StatementInfo},
     portfolio::summary::{PortfolioSummary, PortfolioTotals, PositionSummary},
 };
 
@@ -237,4 +234,106 @@ impl PortfolioSummaryRepository {
 
 fn parse_decimal(value: &str, field: &'static str) -> Result<Decimal, DbError> {
     Decimal::from_str(value).map_err(|source| DbError::InvalidDecimal { field, source })
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{
+        sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+        SqlitePool,
+    };
+
+    use super::*;
+
+    async fn setup_test_db() -> SqlitePool {
+        let options = SqliteConnectOptions::from_str("sqlite:memory:")
+            .expect("valid in-memory sqlite url")
+            .create_if_missing(true)
+            .foreign_keys(true)
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Memory);
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .expect("connect test db");
+
+        sqlx::migrate!("./src/infra/persistence/migrations")
+            .run(&pool)
+            .await
+            .expect("run migrations");
+
+        pool
+    }
+
+    fn sample_portfolio_summary() -> PortfolioSummary {
+        PortfolioSummary {
+            statement: StatementInfo {
+                title: Some("Activity Statement".to_string()),
+                broker_name: Some("Interactive Brokers".to_string()),
+                broker_address: None,
+                period: Some("2026-06-01".to_string()),
+                generated_at: Some("2026-06-01T10:00:00Z".to_string()),
+            },
+            account_info: AccountInfo {
+                account_capabilities: Some("Margin".to_string()),
+                account_type: Some("Individual".to_string()),
+                base_currency: Some("USD".to_string()),
+                customer_type: Some("Individual".to_string()),
+                name: Some("Test Account".to_string()),
+            },
+            totals: PortfolioTotals {
+                market_value: rust_decimal::dec!(1000.50),
+                cost_basis: rust_decimal::dec!(900.25),
+                unrealized_pl: rust_decimal::dec!(100.25),
+                unrealized_pl_percent: rust_decimal::dec!(11.14),
+                total_positions: 1,
+            },
+            positions: vec![PositionSummary {
+                symbol: "VWCE".to_string(),
+                quantity: rust_decimal::dec!(10),
+                price: rust_decimal::dec!(100.05),
+                market_value: rust_decimal::dec!(1000.50),
+                allocation_percent: rust_decimal::dec!(100),
+                unrealized_pl: rust_decimal::dec!(100.25),
+                roi_percent: rust_decimal::dec!(11.14),
+            }],
+        }
+    }
+
+    #[tokio::test]
+    async fn insert_then_find_by_id_returns_portfolio_summary() {
+        let pool = setup_test_db().await;
+
+        let summary = sample_portfolio_summary();
+
+        let mut tx = pool.begin().await.expect("tx begin");
+        let id = PortfolioSummaryRepository::insert(&mut tx, &summary)
+            .await
+            .expect("insert porfolio summary");
+        tx.commit().await.expect("commit tx");
+
+        let loaded_summary = PortfolioSummaryRepository::find_by_id(&pool, id)
+            .await
+            .expect("find porfolio summary")
+            .expect("porfolio summary exists");
+
+        assert_eq!(loaded_summary.positions.len(), summary.positions.len());
+        assert_eq!(loaded_summary.account_info.name, summary.account_info.name);
+        assert_eq!(
+            loaded_summary.totals.market_value,
+            summary.totals.market_value
+        );
+    }
+
+    #[tokio::test]
+    async fn find_by_id_returns_none_for_missing_id() {
+        let pool = setup_test_db().await;
+
+        let result = PortfolioSummaryRepository::find_by_id(&pool, 123)
+            .await
+            .expect("database query should succeed");
+
+        assert!(result.is_none());
+    }
 }
