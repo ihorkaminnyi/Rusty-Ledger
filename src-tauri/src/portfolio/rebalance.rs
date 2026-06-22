@@ -26,6 +26,25 @@ impl ValidatedTargets {
             });
         }
 
+        let mut seen_symbol = HashSet::new();
+        for target in &targets {
+            let symbol = target.symbol.trim();
+
+            if symbol.is_empty() {
+                return Err(BackendError::Validation {
+                    reason: "Target allocation symbol must not be empty".to_string(),
+                });
+            }
+
+            let normalizaed_symbol = symbol.to_ascii_uppercase();
+
+            if !seen_symbol.insert(normalizaed_symbol) {
+                return Err(BackendError::Validation {
+                    reason: format!("Duplicate target allocation symbol: {symbol}."),
+                });
+            }
+        }
+
         let total_target_percent: Decimal = targets.iter().map(|t| t.target_percent).sum();
         let tolerance = rust_decimal::dec!(0.01);
         let hundred = rust_decimal::dec!(100);
@@ -431,5 +450,108 @@ mod tests {
             .trades
             .iter()
             .any(|trade| matches!(trade.action, TradeAction::Sell) && trade.symbol == "BND"));
+    }
+
+    #[test]
+    fn generates_only_buys_with_buy_only_strategy() {
+        let summary = summary_with_positions(vec![
+            position("VTI", rust_decimal::dec!(700), rust_decimal::dec!(70)),
+            position("VXUS", rust_decimal::dec!(300), rust_decimal::dec!(60)),
+        ]);
+        let targets = ValidatedTargets::new(vec![
+            TargetAllocation {
+                symbol: "VTI".into(),
+                target_percent: rust_decimal::dec!(50),
+            },
+            TargetAllocation {
+                symbol: "VXUS".into(),
+                target_percent: rust_decimal::dec!(50),
+            },
+        ])
+        .unwrap();
+
+        let plan = PortfolioRebalancer::calculate(
+            &summary,
+            &targets,
+            rust_decimal::dec!(120),
+            RebalanceStrategy::BuyOnly,
+        );
+
+        assert_eq!(plan.trades.len(), 1);
+
+        let trade = &plan.trades[0];
+        assert_eq!(trade.symbol, "VXUS");
+        assert!(matches!(trade.action, TradeAction::Buy));
+        assert_eq!(trade.quantity_delta, Some(rust_decimal::dec!(2)));
+        assert_eq!(trade.price_used, Some(rust_decimal::dec!(60)));
+        assert_eq!(trade.value_delta, rust_decimal::dec!(120));
+    }
+
+    #[test]
+    fn rejects_empty_targets() {
+        let result = ValidatedTargets::new(vec![]);
+
+        assert!(matches!(result, Err(BackendError::Validation { .. })));
+    }
+
+    #[test]
+    fn rejects_targets_that_do_not_sum_to_100_percent() {
+        let result = ValidatedTargets::new(vec![
+            TargetAllocation {
+                symbol: "VTI".into(),
+                target_percent: rust_decimal::dec!(60),
+            },
+            TargetAllocation {
+                symbol: "VXUS".into(),
+                target_percent: rust_decimal::dec!(30),
+            },
+        ]);
+
+        assert!(matches!(result, Err(BackendError::Validation { .. })));
+    }
+
+    #[test]
+    fn buy_only_with_zero_deposit_generates_no_trades() {
+        let summary = summary_with_positions(vec![
+            position("VTI", rust_decimal::dec!(700), rust_decimal::dec!(70)),
+            position("VXUS", rust_decimal::dec!(300), rust_decimal::dec!(60)),
+        ]);
+
+        let targets = ValidatedTargets::new(vec![
+            TargetAllocation {
+                symbol: "VTI".into(),
+                target_percent: rust_decimal::dec!(50),
+            },
+            TargetAllocation {
+                symbol: "VXUS".into(),
+                target_percent: rust_decimal::dec!(50),
+            },
+        ])
+        .unwrap();
+
+        let plan = PortfolioRebalancer::calculate(
+            &summary,
+            &targets,
+            Decimal::ZERO,
+            RebalanceStrategy::BuyOnly,
+        );
+
+        assert!(plan.trades.is_empty());
+    }
+
+    #[test]
+    fn rejects_duplicate_target_symbols() {
+        let result = ValidatedTargets::new(vec![
+            TargetAllocation {
+                symbol: "VTI".into(),
+                target_percent: rust_decimal::dec!(50),
+            },
+            TargetAllocation {
+                symbol: "vti".into(),
+                target_percent: rust_decimal::dec!(50),
+            },
+        ]);
+
+        assert!(matches!(result, Err(BackendError::Validation { .. })));
     }
 }
