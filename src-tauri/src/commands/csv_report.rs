@@ -1,10 +1,15 @@
 use crate::{
-    error::{BackendError, CommandError},
-    infra::csv::ib_report_parser::IBCSVParser,
+    error::{BackendError, CommandError, DbError},
+    infra::{
+        csv::ib_report_parser::IBCSVParser,
+        persistence::repositories::portfolio_summary_repository::PortfolioSummaryRepository,
+    },
     portfolio::summary::PortfolioSummary,
+    AppState,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
+use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
@@ -32,8 +37,32 @@ pub async fn open_file_dialog(
 }
 
 #[tauri::command]
-pub async fn process_csv_report(file_path: PathBuf) -> Result<PortfolioSummary, CommandError> {
-    parse_portfolio_summary(&file_path).map_err(CommandError::from)
+pub async fn process_csv_report(
+    state: State<'_, AppState>,
+    file_path: PathBuf,
+) -> Result<PortfolioSummary, CommandError> {
+    let summary = parse_portfolio_summary(&file_path).map_err(CommandError::from)?;
+
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(DbError::Query)
+        .map_err(BackendError::from)
+        .map_err(CommandError::from)?;
+
+    PortfolioSummaryRepository::insert(&mut tx, &summary)
+        .await
+        .map_err(BackendError::from)
+        .map_err(CommandError::from)?;
+
+    tx.commit()
+        .await
+        .map_err(DbError::Query)
+        .map_err(BackendError::from)
+        .map_err(CommandError::from)?;
+
+    Ok(summary)
 }
 
 pub fn parse_portfolio_summary<P: AsRef<Path>>(
