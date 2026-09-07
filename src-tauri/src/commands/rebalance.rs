@@ -9,6 +9,7 @@ use crate::{
 
 use super::csv_report::parse_portfolio_summary;
 
+// TODO: calcute rebalance from the latest portfolio summary
 #[tauri::command]
 pub async fn suggest_rebalance(
     file_path: String,

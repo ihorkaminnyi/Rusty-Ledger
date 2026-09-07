@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import WelcomeScreen from "./components/welcome/WelcomeScreen.vue";
-import { computed, watch } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import DashboardView from "./components/dashboard/DashboardView.vue";
 import { useAppStore } from "./stores/appStore.ts";
 import AppHeader from "./components/layout/AppHeader.vue";
 import { useToast } from "primevue/usetoast";
+import {
+    TauriService,
+    isTauriCommandError,
+} from "./services/tauri.ts";
 
 const appStore = useAppStore();
 const { hasPortfolio, errors } = storeToRefs(appStore);
@@ -51,6 +55,53 @@ watch(
     },
     { deep: true },
 );
+
+const loadLatestPortfolio = async (): Promise<void> => {
+    if (!TauriService.isTauriAvailable()) {
+        return;
+    }
+
+    appStore.setLoading(true);
+    appStore.clearErrorsByScope("portfolio");
+
+    try {
+        const portfolio =
+            await TauriService.getLatestPortfolioSummary();
+
+        if (portfolio) {
+            appStore.setPortfolio(portfolio);
+        }
+    } catch (error) {
+        if (isTauriCommandError(error)) {
+            appStore.pushError({
+                scope: "portfolio",
+                message: error.message,
+                code: error.code,
+                details: error.details,
+            });
+            return;
+        }
+
+        appStore.pushError({
+            scope: "portfolio",
+            message:
+                error instanceof Error
+                    ? error.message
+                    : "Failed to load the latest portfolio.",
+            details:
+                error instanceof Error
+                    ? error.stack
+                    : undefined,
+        });
+    } finally {
+        appStore.setLoading(false);
+    }
+};
+
+onMounted(() => {
+    void loadLatestPortfolio();
+});
+
 </script>
 
 <template>

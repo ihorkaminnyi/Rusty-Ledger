@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                symbol,\n                quantity,\n                price,\n                market_value,\n                allocation_percent,\n                unrealized_pl,\n                roi_percent\n            FROM portfolio_positions\n            WHERE summary_id = ?\n            ORDER BY id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "symbol",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "quantity",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "price",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "market_value",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "allocation_percent",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "unrealized_pl",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "roi_percent",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "945092f46ff79b5aaf3d8b18b6ec882f7da0905785a1071886c57ca4453f9545"
+}

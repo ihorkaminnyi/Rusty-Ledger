@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use rust_decimal::Decimal;
-use sqlx::{Sqlite, Transaction};
+use sqlx::{Sqlite, SqlitePool, Transaction};
 
 use crate::{
     error::DbError,
@@ -104,7 +104,7 @@ impl PortfolioSummaryRepository {
     }
 
     pub async fn find_by_id(
-        pool: &sqlx::SqlitePool,
+        pool: &SqlitePool,
         id: i64,
     ) -> Result<Option<PortfolioSummary>, DbError> {
         let summary_row = sqlx::query!(
@@ -230,6 +230,26 @@ impl PortfolioSummaryRepository {
             positions,
         }))
     }
+
+    pub async fn find_latest(pool: &SqlitePool) -> Result<Option<PortfolioSummary>, DbError> {
+        let latest_id = sqlx::query_scalar!(
+            r#"
+            SELECT id
+            FROM portfolio_summaries
+            ORDER BY id DESC
+            LIMIT 1
+            "#
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(DbError::Query)?;
+
+        let Some(latest_id) = latest_id else {
+            return Ok(None);
+        };
+
+        Self::find_by_id(pool, latest_id).await
+    }
 }
 
 fn parse_decimal(value: &str, field: &'static str) -> Result<Decimal, DbError> {
@@ -246,7 +266,7 @@ mod tests {
     use super::*;
 
     async fn setup_test_db() -> SqlitePool {
-        let options = SqliteConnectOptions::from_str("sqlite:memory:")
+        let options = SqliteConnectOptions::from_str("sqlite::memory:")
             .expect("valid in-memory sqlite url")
             .create_if_missing(true)
             .foreign_keys(true)
@@ -301,17 +321,25 @@ mod tests {
         }
     }
 
+    async fn insert_summary(pool: &SqlitePool, summary: &PortfolioSummary) -> i64 {
+        let mut tx = pool.begin().await.expect("begin transaction");
+
+        let id = PortfolioSummaryRepository::insert(&mut tx, summary)
+            .await
+            .expect("insert portfolio summary");
+
+        tx.commit().await.expect("commit transaction");
+
+        id
+    }
+
     #[tokio::test]
     async fn insert_then_find_by_id_returns_portfolio_summary() {
         let pool = setup_test_db().await;
 
         let summary = sample_portfolio_summary();
 
-        let mut tx = pool.begin().await.expect("tx begin");
-        let id = PortfolioSummaryRepository::insert(&mut tx, &summary)
-            .await
-            .expect("insert porfolio summary");
-        tx.commit().await.expect("commit tx");
+        let id = insert_summary(&pool, &summary).await;
 
         let loaded_summary = PortfolioSummaryRepository::find_by_id(&pool, id)
             .await
@@ -331,6 +359,58 @@ mod tests {
         let pool = setup_test_db().await;
 
         let result = PortfolioSummaryRepository::find_by_id(&pool, 123)
+            .await
+            .expect("database query should succeed");
+
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn find_latest_returns_inserted_portfolio_summary() {
+        let pool = setup_test_db().await;
+        let summary = sample_portfolio_summary();
+
+        insert_summary(&pool, &summary).await;
+
+        let loaded = PortfolioSummaryRepository::find_latest(&pool)
+            .await
+            .expect("query latest portfolio summary")
+            .expect("portfolio summary exists");
+
+        assert_eq!(loaded.account_info.name, summary.account_info.name);
+        assert_eq!(loaded.totals.market_value, summary.totals.market_value);
+        assert_eq!(loaded.positions.len(), summary.positions.len());
+        assert_eq!(loaded.positions[0].symbol, summary.positions[0].symbol);
+    }
+
+    #[tokio::test]
+    async fn find_latest_returns_most_recently_inserted_summary() {
+        let pool = setup_test_db().await;
+
+        let first = sample_portfolio_summary();
+        insert_summary(&pool, &first).await;
+
+        let mut second = sample_portfolio_summary();
+        second.account_info.name = Some("Latest Account".to_string());
+        second.totals.market_value = rust_decimal::dec!(2000.75);
+        second.positions[0].market_value = rust_decimal::dec!(2000.75);
+
+        insert_summary(&pool, &second).await;
+
+        let loaded = PortfolioSummaryRepository::find_latest(&pool)
+            .await
+            .expect("query latest portfolio summary")
+            .expect("portfolio summary exists");
+
+        assert_eq!(loaded.account_info.name.as_deref(), Some("Latest Account"),);
+        assert_eq!(loaded.totals.market_value, rust_decimal::dec!(2000.75),);
+    }
+
+    #[tokio::test]
+    async fn find_latest_returns_none_in_empty_portfolio_summaries() {
+        let pool = setup_test_db().await;
+
+        let result = PortfolioSummaryRepository::find_latest(&pool)
             .await
             .expect("database query should succeed");
 

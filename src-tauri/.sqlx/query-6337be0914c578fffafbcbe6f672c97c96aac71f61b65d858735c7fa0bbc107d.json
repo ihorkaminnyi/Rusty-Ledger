@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO portfolio_summaries (\n                account_type,\n                customer_type,\n                account_capabilities,\n                base_currency,\n                account_name,\n                statement_period,\n                generated_at,\n                statement_title,\n                broker_name,\n                broker_address,\n                market_value,\n                cost_basis,\n                unrealized_pl,\n                unrealized_pl_percent,\n                total_positions\n            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 15
+    },
+    "nullable": []
+  },
+  "hash": "6337be0914c578fffafbcbe6f672c97c96aac71f61b65d858735c7fa0bbc107d"
+}

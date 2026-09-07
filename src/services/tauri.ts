@@ -111,6 +111,15 @@ export class TauriService {
     }
   }
 
+  static async getLatestPortfolioSummary(): Promise<PortfolioSummary | null> {
+    this.ensureTauriAvailable();
+    try {
+      return await invoke<PortfolioSummary | null>("get_latest_portfolio_summary");
+    } catch (error) {
+      throw this.mapError(error, "Failed to get latest portfolio summary.");
+    }
+  }
+
   static async processCSVFile(filePath: string): Promise<PortfolioSummary> {
     this.ensureTauriAvailable();
     try {

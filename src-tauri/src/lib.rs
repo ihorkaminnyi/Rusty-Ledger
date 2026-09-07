@@ -29,7 +29,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             open_file_dialog,
             process_csv_report,
-            suggest_rebalance
+            suggest_rebalance,
+            get_latest_portfolio_summary
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

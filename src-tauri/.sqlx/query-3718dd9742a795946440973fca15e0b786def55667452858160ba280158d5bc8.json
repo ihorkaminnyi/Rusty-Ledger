@@ -1,0 +1,104 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                account_type,\n                customer_type,\n                account_capabilities,\n                base_currency,\n                account_name,\n                statement_period,\n                generated_at,\n                statement_title,\n                broker_name,\n                broker_address,\n                market_value,\n                cost_basis,\n                unrealized_pl,\n                unrealized_pl_percent,\n                total_positions\n            FROM portfolio_summaries\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_type",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "customer_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "account_capabilities",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "base_currency",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "account_name",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "statement_period",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "generated_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "statement_title",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "broker_name",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "broker_address",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "market_value",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "cost_basis",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "unrealized_pl",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "unrealized_pl_percent",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_positions",
+        "ordinal": 14,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3718dd9742a795946440973fca15e0b786def55667452858160ba280158d5bc8"
+}

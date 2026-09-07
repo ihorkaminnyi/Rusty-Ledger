@@ -65,6 +65,18 @@ pub async fn process_csv_report(
     Ok(summary)
 }
 
+#[tauri::command]
+pub async fn get_latest_portfolio_summary(
+    state: State<'_, AppState>,
+) -> Result<Option<PortfolioSummary>, CommandError> {
+    let latest_summary = PortfolioSummaryRepository::find_latest(&state.db)
+        .await
+        .map_err(BackendError::from)
+        .map_err(CommandError::from)?;
+
+    Ok(latest_summary)
+}
+
 pub fn parse_portfolio_summary<P: AsRef<Path>>(
     file_path: P,
 ) -> Result<PortfolioSummary, BackendError> {
