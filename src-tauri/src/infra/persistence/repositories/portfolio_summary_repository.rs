@@ -6,7 +6,9 @@ use sqlx::{Sqlite, SqlitePool, Transaction};
 use crate::{
     error::DbError,
     infra::csv::ib_report_parser::view::{AccountInfo, StatementInfo},
-    portfolio::summary::{PortfolioSummary, PortfolioTotals, PositionSummary},
+    portfolio::summary::{
+        PortfolioSummary, PortfolioTotals, PositionSummary, StoredPortfolioSummary,
+    },
 };
 
 pub struct PortfolioSummaryRepository;
@@ -231,7 +233,7 @@ impl PortfolioSummaryRepository {
         }))
     }
 
-    pub async fn find_latest(pool: &SqlitePool) -> Result<Option<PortfolioSummary>, DbError> {
+    pub async fn find_latest(pool: &SqlitePool) -> Result<Option<StoredPortfolioSummary>, DbError> {
         let latest_id = sqlx::query_scalar!(
             r#"
             SELECT id
@@ -248,7 +250,16 @@ impl PortfolioSummaryRepository {
             return Ok(None);
         };
 
-        Self::find_by_id(pool, latest_id).await
+        let portfolio = Self::find_by_id(pool, latest_id).await;
+
+        let Some(portfolio) = portfolio? else {
+            return Ok(None);
+        };
+
+        Ok(Some(StoredPortfolioSummary {
+            id: latest_id,
+            portfolio,
+        }))
     }
 }
 
@@ -377,10 +388,20 @@ mod tests {
             .expect("query latest portfolio summary")
             .expect("portfolio summary exists");
 
-        assert_eq!(loaded.account_info.name, summary.account_info.name);
-        assert_eq!(loaded.totals.market_value, summary.totals.market_value);
-        assert_eq!(loaded.positions.len(), summary.positions.len());
-        assert_eq!(loaded.positions[0].symbol, summary.positions[0].symbol);
+        assert_eq!(loaded.id, 1);
+        assert_eq!(
+            loaded.portfolio.account_info.name,
+            summary.account_info.name
+        );
+        assert_eq!(
+            loaded.portfolio.totals.market_value,
+            summary.totals.market_value
+        );
+        assert_eq!(loaded.portfolio.positions.len(), summary.positions.len());
+        assert_eq!(
+            loaded.portfolio.positions[0].symbol,
+            summary.positions[0].symbol
+        );
     }
 
     #[tokio::test]
@@ -402,8 +423,19 @@ mod tests {
             .expect("query latest portfolio summary")
             .expect("portfolio summary exists");
 
-        assert_eq!(loaded.account_info.name.as_deref(), Some("Latest Account"),);
-        assert_eq!(loaded.totals.market_value, rust_decimal::dec!(2000.75),);
+        assert_eq!(loaded.id, 2);
+        assert_eq!(
+            loaded.portfolio.account_info.name.as_deref(),
+            Some("Latest Account")
+        );
+        assert_eq!(
+            loaded.portfolio.totals.market_value,
+            rust_decimal::dec!(2000.75)
+        );
+        assert_eq!(
+            loaded.portfolio.positions[0].market_value,
+            rust_decimal::dec!(2000.75)
+        );
     }
 
     #[tokio::test]

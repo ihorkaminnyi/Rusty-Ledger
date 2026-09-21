@@ -38,3 +38,8 @@ export interface PortfolioSummary {
     totals: PortfolioTotals;
     positions: PositionSummary[];
 }
+
+export interface StoredPortfolioSummary {
+    id: number;
+    portfolio: PortfolioSummary;
+}

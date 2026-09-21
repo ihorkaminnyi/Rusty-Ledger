@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { PortfolioSummary } from "../types/portfolio.ts";
+import type { StoredPortfolioSummary } from "../types/portfolio.ts";
 import type {
   RebalancePlan,
   RebalanceStrategy,
@@ -111,19 +111,19 @@ export class TauriService {
     }
   }
 
-  static async getLatestPortfolioSummary(): Promise<PortfolioSummary | null> {
+  static async getLatestPortfolioSummary(): Promise<StoredPortfolioSummary | null> {
     this.ensureTauriAvailable();
     try {
-      return await invoke<PortfolioSummary | null>("get_latest_portfolio_summary");
+      return await invoke<StoredPortfolioSummary | null>("get_latest_portfolio_summary");
     } catch (error) {
       throw this.mapError(error, "Failed to get latest portfolio summary.");
     }
   }
 
-  static async processCSVFile(filePath: string): Promise<PortfolioSummary> {
+  static async processCSVFile(filePath: string): Promise<StoredPortfolioSummary> {
     this.ensureTauriAvailable();
     try {
-      return await invoke<PortfolioSummary>("process_csv_report", { filePath });
+      return await invoke<StoredPortfolioSummary>("process_csv_report", { filePath });
     } catch (error) {
       throw this.mapError(error, "Failed to process CSV file.");
     }

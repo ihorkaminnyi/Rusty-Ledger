@@ -11,6 +11,13 @@ use crate::{
 };
 use rust_decimal::Decimal;
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredPortfolioSummary {
+    pub id: i64,
+    pub portfolio: PortfolioSummary,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortfolioSummary {

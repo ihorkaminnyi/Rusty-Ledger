@@ -4,7 +4,7 @@ use crate::{
         csv::ib_report_parser::IBCSVParser,
         persistence::repositories::portfolio_summary_repository::PortfolioSummaryRepository,
     },
-    portfolio::summary::PortfolioSummary,
+    portfolio::summary::{PortfolioSummary, StoredPortfolioSummary},
     AppState,
 };
 use std::fs;
@@ -40,7 +40,7 @@ pub async fn open_file_dialog(
 pub async fn process_csv_report(
     state: State<'_, AppState>,
     file_path: PathBuf,
-) -> Result<PortfolioSummary, CommandError> {
+) -> Result<StoredPortfolioSummary, CommandError> {
     let summary = parse_portfolio_summary(&file_path).map_err(CommandError::from)?;
 
     let mut tx = state
@@ -51,7 +51,7 @@ pub async fn process_csv_report(
         .map_err(BackendError::from)
         .map_err(CommandError::from)?;
 
-    PortfolioSummaryRepository::insert(&mut tx, &summary)
+    let summary_id = PortfolioSummaryRepository::insert(&mut tx, &summary)
         .await
         .map_err(BackendError::from)
         .map_err(CommandError::from)?;
@@ -62,13 +62,16 @@ pub async fn process_csv_report(
         .map_err(BackendError::from)
         .map_err(CommandError::from)?;
 
-    Ok(summary)
+    Ok(StoredPortfolioSummary {
+        id: summary_id,
+        portfolio: summary,
+    })
 }
 
 #[tauri::command]
 pub async fn get_latest_portfolio_summary(
     state: State<'_, AppState>,
-) -> Result<Option<PortfolioSummary>, CommandError> {
+) -> Result<Option<StoredPortfolioSummary>, CommandError> {
     let latest_summary = PortfolioSummaryRepository::find_latest(&state.db)
         .await
         .map_err(BackendError::from)

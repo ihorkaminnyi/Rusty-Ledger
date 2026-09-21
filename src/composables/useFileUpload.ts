@@ -57,8 +57,8 @@ export function useFileUpload() {
         appStore.setLoading(true);
         appStore.clearErrorsByScope('upload');
         try {
-            const portfolio = await TauriService.processCSVFile(filePath);
-            appStore.setPortfolio(portfolio);
+            const stored = await TauriService.processCSVFile(filePath);
+            appStore.setPortfolio(stored.portfolio);
             appStore.setReportFilePath(filePath);
             appStore.setRebalance(null);
         } catch (error) {

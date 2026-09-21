@@ -65,11 +65,11 @@ const loadLatestPortfolio = async (): Promise<void> => {
     appStore.clearErrorsByScope("portfolio");
 
     try {
-        const portfolio =
+        const stored =
             await TauriService.getLatestPortfolioSummary();
 
-        if (portfolio) {
-            appStore.setPortfolio(portfolio);
+        if (stored) {
+            appStore.setPortfolio(stored.portfolio);
         }
     } catch (error) {
         if (isTauriCommandError(error)) {
