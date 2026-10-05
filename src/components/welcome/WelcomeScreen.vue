@@ -4,10 +4,15 @@ import { storeToRefs } from 'pinia';
 
 import { useFileUpload } from '../../composables/useFileUpload.ts';
 import { useAppStore } from '../../stores/appStore.ts';
+import { TauriService } from '../../services/tauri.ts';
 import Skeleton from 'primevue/skeleton';
 import Message from 'primevue/message';
 import HelpButton from './HelpButton.vue';
 import AboutModal from '../layout/AboutModal.vue';
+
+defineProps<{ noSavedReport: boolean }>();
+const emit = defineEmits<{ openSavedReport: [] }>();
+const isTauriAvailable = TauriService.isTauriAvailable();
 
 interface FeatureHighlight {
   key: string;
@@ -54,6 +59,7 @@ const appStore = useAppStore();
 const { isLoading } = storeToRefs(appStore);
 
 const uploadErrors = computed(() => appStore.errorsByScope('upload'));
+const portfolioErrors = computed(() => appStore.errorsByScope('portfolio'));
 
 const handleDismissUploadError = (id: string) => {
   appStore.dismissError(id);
@@ -136,6 +142,31 @@ const openAboutModal = () => {
               <Skeleton width="60%" height="1rem" animation="wave"/>
             </div>
           </Transition>
+        </div>
+        <div v-if="isTauriAvailable" class="flex flex-column gap-3 mt-4">
+          <Button
+              label="Open saved report"
+              icon="pi pi-database"
+              outlined
+              class="w-full"
+              :disabled="isLoading"
+              @click="emit('openSavedReport')"
+          />
+          <p class="text-sm text-600 text-center m-0">
+            Open the latest report saved on this computer. No CSV file needed.
+          </p>
+          <Message v-if="noSavedReport" severity="info" :closable="false">
+            No saved report found. Import a CSV report to get started.
+          </Message>
+          <Message
+              v-for="error in portfolioErrors"
+              :key="error.id"
+              severity="error"
+              :closable="true"
+              @close="appStore.dismissError(error.id)"
+          >
+            {{ error.message }}
+          </Message>
         </div>
       </div>
     </Transition>

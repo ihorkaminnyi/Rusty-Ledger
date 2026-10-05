@@ -30,7 +30,7 @@
             size="small"
         />
         <Button
-            label="Reset"
+            label="Close report"
             icon="pi pi-refresh"
             @click="handleReset"
             :loading="isLoading"

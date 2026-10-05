@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import WelcomeScreen from "./components/welcome/WelcomeScreen.vue";
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import DashboardView from "./components/dashboard/DashboardView.vue";
 import { useAppStore } from "./stores/appStore.ts";
@@ -15,6 +15,13 @@ const appStore = useAppStore();
 const { hasPortfolio, errors } = storeToRefs(appStore);
 
 const showWelcomeScreen = computed(() => !hasPortfolio.value);
+const noSavedReport = ref(false);
+
+watch(hasPortfolio, (loaded) => {
+    if (loaded) {
+        noSavedReport.value = false;
+    }
+});
 
 const severityByScope: Record<string, "error" | "warn" | "info"> = {
     upload: "error",
@@ -57,19 +64,24 @@ watch(
 );
 
 const loadLatestPortfolio = async (): Promise<void> => {
-    if (!TauriService.isTauriAvailable()) {
+    if (!TauriService.isTauriAvailable() || appStore.isLoading) {
         return;
     }
 
     appStore.setLoading(true);
     appStore.clearErrorsByScope("portfolio");
+    noSavedReport.value = false;
 
     try {
         const stored =
             await TauriService.getLatestPortfolioSummary();
 
         if (stored) {
+            appStore.setReportFilePath(null);
+            appStore.setRebalance(null);
             appStore.setPortfolio(stored.portfolio);
+        } else {
+            noSavedReport.value = true;
         }
     } catch (error) {
         if (isTauriCommandError(error)) {
@@ -109,7 +121,12 @@ onMounted(() => {
         <main class="min-h-screen w-full">
             <Toast />
             <AppHeader v-if="!showWelcomeScreen" />
-            <WelcomeScreen v-if="showWelcomeScreen" key="welcome" />
+            <WelcomeScreen
+                v-if="showWelcomeScreen"
+                key="welcome"
+                :no-saved-report="noSavedReport"
+                @open-saved-report="loadLatestPortfolio"
+            />
             <DashboardView v-else key="dashboard" />
         </main>
     </Transition>
