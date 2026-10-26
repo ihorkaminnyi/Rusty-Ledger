@@ -22,8 +22,10 @@ export function useFileUpload() {
     const isDragging = ref(false);
     const tauriUnsubscribers: UnlistenFn[] = [];
     const isTauriEnv = TauriService.isTauriAvailable();
+    let disposed = false;
 
     const cleanupTauriListeners = () => {
+        disposed = true;
         tauriUnsubscribers.forEach((unsubscribe) => {
             try {
                 unsubscribe();
@@ -54,22 +56,27 @@ export function useFileUpload() {
     };
 
     const processFilePath = async (filePath: string) => {
+        const stored = await TauriService.processCSVFile(filePath);
+        appStore.setStoredPortfolio(stored, filePath);
+    };
+
+    const importFilePath = async (filePath: string) => {
+        if (!appStore.canImport) return;
         appStore.setLoading(true);
         appStore.clearErrorsByScope('upload');
         try {
-            const stored = await TauriService.processCSVFile(filePath);
-            appStore.setPortfolio(stored.portfolio);
-            appStore.setReportFilePath(filePath);
-            appStore.setRebalance(null);
+            await processFilePath(filePath);
         } catch (error) {
             pushUploadError(error);
-            throw error;
         } finally {
             appStore.setLoading(false);
         }
     };
 
     const selectFile = async () => {
+        if (!appStore.canImport) return;
+        appStore.setLoading(true);
+        appStore.clearErrorsByScope('upload');
         try {
             const filePath = await TauriService.openFileDialog();
             if (filePath) {
@@ -77,14 +84,16 @@ export function useFileUpload() {
             }
         } catch (error) {
             pushUploadError(error);
+        } finally {
+            appStore.setLoading(false);
         }
     };
 
     const handleDragEnter = () => {
-        isDragging.value = true;
+        isDragging.value = appStore.canImport;
     };
     const handleDragOver = () => {
-        isDragging.value = true;
+        isDragging.value = appStore.canImport;
     };
     const handleDragLeave = () => {
         isDragging.value = false;
@@ -93,7 +102,7 @@ export function useFileUpload() {
     const handleDrop = async (event: DragEvent) => {
         isDragging.value = false;
 
-        if (appStore.isLoading) {
+        if (!appStore.canImport) {
             clearDataTransfer(event);
             return;
         }
@@ -110,10 +119,7 @@ export function useFileUpload() {
         }
 
         try {
-            await processFilePath(filePath);
-        } catch (error) {
-            console.error('Failed to process dropped file:', error);
-            pushUploadError(error);
+            await importFilePath(filePath);
         } finally {
             clearDataTransfer(event);
         }
@@ -130,14 +136,14 @@ export function useFileUpload() {
                 switch (payload.type) {
                     case 'enter':
                     case 'over':
-                        isDragging.value = true;
+                        isDragging.value = appStore.canImport;
                         return;
                     case 'leave':
                         isDragging.value = false;
                         return;
                     case 'drop': {
                         isDragging.value = false;
-                        if (appStore.isLoading) {
+                        if (!appStore.canImport) {
                             return;
                         }
 
@@ -146,19 +152,15 @@ export function useFileUpload() {
                             return;
                         }
 
-                        try {
-                            await processFilePath(filePath);
-                        } catch (error) {
-                            console.error('Failed to process dropped file:', error);
-                            pushUploadError(error);
-                        }
+                        await importFilePath(filePath);
                         return;
                     }
                     default:
                         return;
                 }
             });
-            tauriUnsubscribers.push(unlisten);
+            if (disposed) unlisten();
+            else tauriUnsubscribers.push(unlisten);
         } catch (error) {
             console.error('Failed to register Tauri drag-n-drop listeners:', error);
             cleanupTauriListeners();

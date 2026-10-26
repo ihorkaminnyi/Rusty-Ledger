@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                DELETE FROM portfolio_summaries WHERE id = ?;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "7e1cd8275bd53e3674353459204cc13308e5fe4fb65d27037f6240a65532b432"
+}

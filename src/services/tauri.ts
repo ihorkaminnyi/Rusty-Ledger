@@ -1,11 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { StoredPortfolioSummary } from "../types/portfolio.ts";
+import type { StoredPortfolioSummary, StoredReportListItem } from "../types/portfolio.ts";
 import type {
   RebalancePlan,
   RebalanceStrategy,
   TargetAllocation,
 } from "../types/rebalance.ts";
-import { NonNegativeNumber } from "../types/numeric.ts";
+import type { NonNegativeNumber } from "../types/numeric.ts";
 
 interface CommandErrorPayload {
   code?: string;
@@ -126,6 +126,58 @@ export class TauriService {
       return await invoke<StoredPortfolioSummary>("process_csv_report", { filePath });
     } catch (error) {
       throw this.mapError(error, "Failed to process CSV file.");
+    }
+  }
+
+  static async listPortfolioSummaries(): Promise<StoredReportListItem[]> {
+    this.ensureTauriAvailable();
+    try {
+      return await invoke<StoredReportListItem[]>("list_portfolio_summaries");
+    } catch (error) {
+      throw this.mapError(error, "Failed to load saved reports.");
+    }
+  }
+
+  static async getPortfolioSummary(id: number): Promise<StoredPortfolioSummary | null> {
+    this.ensureTauriAvailable();
+    try {
+      return await invoke<StoredPortfolioSummary | null>("get_portfolio_summary", { id });
+    } catch (error) {
+      throw this.mapError(error, "Failed to open the saved report.");
+    }
+  }
+
+  static async deletePortfolioSummary(id: number): Promise<boolean> {
+    this.ensureTauriAvailable();
+    try {
+      return await invoke<boolean>("delete_portfolio_summary", { id });
+    } catch (error) {
+      throw this.mapError(error, "Failed to delete the saved report.");
+    }
+  }
+
+  static async clearPortfolioSummaries(): Promise<number> {
+    this.ensureTauriAvailable();
+    try {
+      return await invoke<number>("clear_portfolio_summaries");
+    } catch (error) {
+      throw this.mapError(error, "Failed to clear saved reports.");
+    }
+  }
+
+  static async calcRebalanceForSummary(
+    id: number,
+    targets: TargetAllocation[],
+    depositAmount: NonNegativeNumber,
+    rebalanceStrategy: RebalanceStrategy,
+  ): Promise<RebalancePlan> {
+    this.ensureTauriAvailable();
+    try {
+      return await invoke<RebalancePlan>("suggest_rebalance_for_summary", {
+        id, targets, depositAmount, rebalanceStrategy,
+      });
+    } catch (error) {
+      throw this.mapError(error, "Failed to calculate rebalancing for the saved report.");
     }
   }
 

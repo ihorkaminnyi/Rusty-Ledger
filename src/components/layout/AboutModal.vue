@@ -131,7 +131,7 @@ const openIssues = () => {
           </div>
           <div class="flex align-items-center gap-2 text-sm text-600">
             <i class="pi pi-check text-green-500 text-sm"></i>
-            <span>Data is cleared automatically when you close the app</span>
+            <span>Reports stay on this computer until you delete them in Saved reports</span>
           </div>
           <div class="flex align-items-center gap-2 text-sm text-600">
             <i class="pi pi-check text-green-500 text-sm"></i>

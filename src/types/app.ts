@@ -1,4 +1,4 @@
-import { PortfolioSummary } from './portfolio.ts';
+import type { PortfolioSummary } from './portfolio.ts';
 import type { RebalancePlan } from './rebalance.ts';
 import type { AppError } from './errors.ts';
 
@@ -11,4 +11,7 @@ export interface AppState {
     rebalance: RebalancePlan | null;
     errors: AppError[];
     reportFilePath: string | null;
+    activeReportId: number | null;
+    portfolioRevision: number;
+    isSavedReportsOpen: boolean;
 }

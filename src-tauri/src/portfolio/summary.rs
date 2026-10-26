@@ -80,6 +80,16 @@ pub struct PositionSummary {
     pub roi_percent: Decimal,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredReportListItem {
+    pub id: i64,
+    pub account_name: Option<String>,
+    pub statement_period: Option<String>,
+    pub created_at: String,
+    pub total_positions: usize,
+}
+
 fn build_positions(
     records: &[OpenPositionRecord],
 ) -> Result<(Vec<PositionSummary>, Decimal), ParseError> {

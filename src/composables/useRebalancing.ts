@@ -26,7 +26,7 @@ interface TargetValidationResult {
 export function useRebalancing() {
   const appStore = useAppStore();
   const portfolio = computed(() => appStore.portfolio);
-  const reportFilePath = computed(() => appStore.reportFilePath);
+  const activeReportId = computed(() => appStore.activeReportId);
 
   const state = reactive<RebalancingState>({
     targets: [],
@@ -60,9 +60,12 @@ export function useRebalancing() {
   const canCalculate = computed(
     () =>
       portfolio.value !== null &&
+      activeReportId.value !== null &&
       state.targets.length > 0 &&
       isValidTargetAllocation.value &&
-      !state.isCalculating,
+      !state.isCalculating &&
+      !appStore.isLoading &&
+      !appStore.isSavedReportsOpen,
   );
 
   const updateTarget = (symbol: string, targetPercent: number) => {
@@ -109,28 +112,31 @@ export function useRebalancing() {
       return;
     }
 
-    if (!reportFilePath.value) {
+    if (activeReportId.value === null) {
       appStore.pushError({
         scope: "rebalancing",
         message:
-          "Original report file is required for rebalancing. Please import the portfolio again.",
+          "Open a saved report before calculating a rebalance plan.",
       });
       return;
     }
 
+    const revision = appStore.portfolioRevision;
     try {
       state.isCalculating = true;
-      const plan = await TauriService.calcRebalance(
-        reportFilePath.value,
+      const plan = await TauriService.calcRebalanceForSummary(
+        activeReportId.value,
         state.targets,
         state.depositAmount,
         state.rebalanceStrategy,
       );
+      if (revision !== appStore.portfolioRevision) return;
       state.actions = plan.trades;
       state.hasCalculated = true;
       appStore.setRebalance(plan);
       appStore.clearErrorsByScope("rebalancing");
     } catch (error) {
+      if (revision !== appStore.portfolioRevision) return;
       console.error("Rebalancing calculation error:", error);
       if (isTauriCommandError(error)) {
         appStore.pushError({

@@ -20,20 +20,40 @@
         </div>
       </div>
 
-      <div class="flex align-items-center gap-3">
+      <div class="flex align-items-center justify-content-end flex-wrap gap-2">
         <Button
             label="Upload New Report"
             icon="pi pi-upload"
             @click="handleLoadNewReport"
             :loading="isLoading"
+            :disabled="isLoading"
             outlined
             size="small"
         />
         <Button
+            label="Open latest report"
+            icon="pi pi-history"
+            severity="info"
+            :disabled="isLoading"
+            outlined
+            size="small"
+            @click="emit('openLatestReport')"
+        />
+        <Button
+            label="Saved reports"
+            icon="pi pi-folder-open"
+            severity="help"
+            :disabled="isLoading"
+            outlined
+            size="small"
+            @click="emit('openSavedReports')"
+        />
+        <Button
             label="Close report"
-            icon="pi pi-refresh"
+            icon="pi pi-times"
             @click="handleReset"
             :loading="isLoading"
+            :disabled="isLoading"
             severity="secondary"
             outlined
             size="small"
@@ -48,6 +68,8 @@ import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAppStore } from '../../stores/appStore.ts';
 import { useFileUpload } from '../../composables/useFileUpload.ts';
+
+const emit = defineEmits<{ openLatestReport: []; openSavedReports: [] }>();
 
 const appStore = useAppStore();
 const { portfolio, isLoading } = storeToRefs(appStore);
@@ -123,8 +145,8 @@ const handleLoadNewReport = async () => {
 };
 
 const handleReset = () => {
+  if (appStore.isLoading) return;
   appStore.clearPortfolio();
-  appStore.setRebalance(null);
   appStore.clearAllErrors();
 };
 </script>

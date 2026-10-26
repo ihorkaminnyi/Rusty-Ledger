@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import type { AppState } from '../types/app.ts';
-import type { PortfolioSummary } from '../types/portfolio.ts';
+import type { StoredPortfolioSummary } from '../types/portfolio.ts';
 import type { RebalancePlan } from '../types/rebalance.ts';
 import type { AppError, AppErrorInput, AppErrorScope } from '../types/errors.ts';
 
@@ -21,8 +21,12 @@ export const useAppStore = defineStore('app', {
         rebalance: null,
         errors: [],
         reportFilePath: null,
+        activeReportId: null,
+        portfolioRevision: 0,
+        isSavedReportsOpen: false,
     }),
     getters: {
+        canImport: (state) => !state.isLoading && !state.isSavedReportsOpen,
         hasPortfolio: (state) => state.portfolio !== null,
         latestError: (state): AppError | null =>
             state.errors.length > 0 ? state.errors[state.errors.length - 1] : null,
@@ -33,24 +37,32 @@ export const useAppStore = defineStore('app', {
         setLoading(isLoading: boolean) {
             this.isLoading = isLoading;
         },
-        setPortfolio(portfolio: PortfolioSummary) {
-            this.portfolio = portfolio;
+        setStoredPortfolio(stored: StoredPortfolioSummary, filePath: string | null = null) {
+            this.activeReportId = stored.id;
+            this.portfolio = stored.portfolio;
+            this.reportFilePath = filePath;
+            this.rebalance = null;
             this.isDataLoaded = true;
             this.showGettingStarted = false;
             this.clearErrorsByScope('upload');
             this.clearErrorsByScope('portfolio');
+            this.clearErrorsByScope('rebalancing');
+            this.portfolioRevision += 1;
         },
         setRebalance(rebalance: RebalancePlan | null) {
             this.rebalance = rebalance;
-            this.isDataLoaded = true;
-            this.showGettingStarted = false;
             this.clearErrorsByScope('rebalancing');
         },
         clearPortfolio() {
             this.portfolio = null;
+            this.activeReportId = null;
+            this.rebalance = null;
             this.isDataLoaded = false;
+            this.showGettingStarted = true;
             this.reportFilePath = null;
             this.clearErrorsByScope('portfolio');
+            this.clearErrorsByScope('rebalancing');
+            this.portfolioRevision += 1;
         },
         toggleAboutModal(show?: boolean) {
             this.showAboutModal = typeof show === 'boolean' ? show : !this.showAboutModal;

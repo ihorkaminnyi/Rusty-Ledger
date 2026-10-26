@@ -59,7 +59,7 @@ watch(
 watch(
     () => rebalancingState.hasCalculated,
     (isCalculated) => {
-        showRebalancingDialog.value = isCalculated;
+        showRebalancingDialog.value = isCalculated && !appStore.isSavedReportsOpen;
     },
 );
 
@@ -177,7 +177,7 @@ const handleTargetUpdate = (symbol: string, value: number | null) => {
 const handleCalculateRebalancing = async () => {
     if (!canSubmitTargets.value) return;
     await calculateRebalancing();
-    showRebalancingDialog.value = rebalancingState.hasCalculated;
+    showRebalancingDialog.value = rebalancingState.hasCalculated && !appStore.isSavedReportsOpen;
 };
 
 const handleResetTargets = () => {

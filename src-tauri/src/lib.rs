@@ -30,7 +30,12 @@ pub fn run() {
             open_file_dialog,
             process_csv_report,
             suggest_rebalance,
-            get_latest_portfolio_summary
+            get_latest_portfolio_summary,
+            list_portfolio_summaries,
+            get_portfolio_summary,
+            delete_portfolio_summary,
+            clear_portfolio_summaries,
+            suggest_rebalance_for_summary
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

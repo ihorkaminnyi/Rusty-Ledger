@@ -1,33 +1,25 @@
 <script setup lang="ts">
 import WelcomeScreen from "./components/welcome/WelcomeScreen.vue";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import DashboardView from "./components/dashboard/DashboardView.vue";
 import { useAppStore } from "./stores/appStore.ts";
 import AppHeader from "./components/layout/AppHeader.vue";
+import SavedReportsModal from "./components/layout/SavedReportsModal.vue";
+import { usePortfolioReports } from "./composables/usePortfolioReports.ts";
 import { useToast } from "primevue/usetoast";
-import {
-    TauriService,
-    isTauriCommandError,
-} from "./services/tauri.ts";
 
 const appStore = useAppStore();
-const { hasPortfolio, errors } = storeToRefs(appStore);
+const { hasPortfolio, errors, activeReportId, portfolioRevision, isSavedReportsOpen, isLoading } = storeToRefs(appStore);
 
 const showWelcomeScreen = computed(() => !hasPortfolio.value);
-const noSavedReport = ref(false);
-
-watch(hasPortfolio, (loaded) => {
-    if (loaded) {
-        noSavedReport.value = false;
-    }
-});
 
 const severityByScope: Record<string, "error" | "warn" | "info"> = {
     upload: "error",
     rebalancing: "error",
     tauri: "warn",
-    portfolio: "info",
+    portfolio: "error",
+    reports: "error",
 };
 
 const summaryByScope: Record<string, string> = {
@@ -35,10 +27,19 @@ const summaryByScope: Record<string, string> = {
     rebalancing: "Rebalancing Issue",
     tauri: "Desktop Integration",
     portfolio: "Portfolio Issue",
+    reports: "Saved Reports",
     global: "Application Error",
 };
 
 const toast = useToast();
+const {
+    reports, isLoadingList, listError, operationError, pendingAction,
+    confirmation, noSavedReport, loadReports, setReportsVisible,
+    openLatestReport, openReport, requestDelete, requestClearAll,
+    confirmDeletion, cancelConfirmation,
+} = usePortfolioReports((severity, detail) => {
+    toast.add({ severity, summary: 'Saved Reports', detail, life: 4000 });
+});
 
 watch(
     errors,
@@ -63,55 +64,8 @@ watch(
     { deep: true },
 );
 
-const loadLatestPortfolio = async (): Promise<void> => {
-    if (!TauriService.isTauriAvailable() || appStore.isLoading) {
-        return;
-    }
-
-    appStore.setLoading(true);
-    appStore.clearErrorsByScope("portfolio");
-    noSavedReport.value = false;
-
-    try {
-        const stored =
-            await TauriService.getLatestPortfolioSummary();
-
-        if (stored) {
-            appStore.setReportFilePath(null);
-            appStore.setRebalance(null);
-            appStore.setPortfolio(stored.portfolio);
-        } else {
-            noSavedReport.value = true;
-        }
-    } catch (error) {
-        if (isTauriCommandError(error)) {
-            appStore.pushError({
-                scope: "portfolio",
-                message: error.message,
-                code: error.code,
-                details: error.details,
-            });
-            return;
-        }
-
-        appStore.pushError({
-            scope: "portfolio",
-            message:
-                error instanceof Error
-                    ? error.message
-                    : "Failed to load the latest portfolio.",
-            details:
-                error instanceof Error
-                    ? error.stack
-                    : undefined,
-        });
-    } finally {
-        appStore.setLoading(false);
-    }
-};
-
 onMounted(() => {
-    void loadLatestPortfolio();
+    void openLatestReport();
 });
 
 </script>
@@ -120,14 +74,35 @@ onMounted(() => {
     <Transition name="screen-fade" mode="out-in">
         <main class="min-h-screen w-full">
             <Toast />
-            <AppHeader v-if="!showWelcomeScreen" />
+            <AppHeader v-if="!showWelcomeScreen"
+                @open-latest-report="openLatestReport"
+                @open-saved-reports="setReportsVisible(true)" />
             <WelcomeScreen
                 v-if="showWelcomeScreen"
                 key="welcome"
                 :no-saved-report="noSavedReport"
-                @open-saved-report="loadLatestPortfolio"
+                @open-latest-report="openLatestReport"
+                @open-saved-reports="setReportsVisible(true)"
             />
-            <DashboardView v-else key="dashboard" />
+            <DashboardView v-else :key="portfolioRevision" />
+            <SavedReportsModal
+                :model-value="isSavedReportsOpen"
+                :reports="reports"
+                :active-report-id="activeReportId"
+                :loading="isLoadingList"
+                :busy="isLoading"
+                :list-error="listError"
+                :operation-error="operationError"
+                :pending-action="pendingAction"
+                :confirmation="confirmation"
+                @update:model-value="setReportsVisible"
+                @open-report="openReport"
+                @request-delete="requestDelete"
+                @request-clear-all="requestClearAll"
+                @confirm-deletion="confirmDeletion"
+                @cancel-confirmation="cancelConfirmation"
+                @retry="loadReports"
+            />
         </main>
     </Transition>
 </template>

@@ -11,7 +11,7 @@ import HelpButton from './HelpButton.vue';
 import AboutModal from '../layout/AboutModal.vue';
 
 defineProps<{ noSavedReport: boolean }>();
-const emit = defineEmits<{ openSavedReport: [] }>();
+const emit = defineEmits<{ openLatestReport: []; openSavedReports: [] }>();
 const isTauriAvailable = TauriService.isTauriAvailable();
 
 interface FeatureHighlight {
@@ -145,16 +145,26 @@ const openAboutModal = () => {
         </div>
         <div v-if="isTauriAvailable" class="flex flex-column gap-3 mt-4">
           <Button
-              label="Open saved report"
+              label="Open latest report"
               icon="pi pi-database"
+              severity="info"
               outlined
               class="w-full"
               :disabled="isLoading"
-              @click="emit('openSavedReport')"
+              @click="emit('openLatestReport')"
           />
           <p class="text-sm text-600 text-center m-0">
             Open the latest report saved on this computer. No CSV file needed.
           </p>
+          <Button
+              label="Saved reports"
+              icon="pi pi-folder-open"
+              outlined
+              severity="help"
+              class="w-full"
+              :disabled="isLoading"
+              @click="emit('openSavedReports')"
+          />
           <Message v-if="noSavedReport" severity="info" :closable="false">
             No saved report found. Import a CSV report to get started.
           </Message>

@@ -43,3 +43,11 @@ export interface StoredPortfolioSummary {
     id: number;
     portfolio: PortfolioSummary;
 }
+
+export interface StoredReportListItem {
+    id: number;
+    accountName: string | null;
+    statementPeriod: string | null;
+    createdAt: string;
+    totalPositions: number;
+}

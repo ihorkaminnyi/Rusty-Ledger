@@ -8,6 +8,7 @@ use crate::{
     infra::csv::ib_report_parser::view::{AccountInfo, StatementInfo},
     portfolio::summary::{
         PortfolioSummary, PortfolioTotals, PositionSummary, StoredPortfolioSummary,
+        StoredReportListItem,
     },
 };
 
@@ -261,6 +262,70 @@ impl PortfolioSummaryRepository {
             portfolio,
         }))
     }
+
+    pub async fn list(pool: &SqlitePool) -> Result<Vec<StoredReportListItem>, DbError> {
+        let list_rows = sqlx::query!(
+            r#"
+                SELECT
+                    id,
+                    account_name,
+                    statement_period,
+                    created_at,
+                    total_positions
+                FROM portfolio_summaries
+                ORDER BY id DESC;
+            "#
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)?;
+
+        list_rows
+            .into_iter()
+            .map(|row| {
+                let total_positions = usize::try_from(row.total_positions).map_err(|_| {
+                    DbError::InvalidData(format!(
+                        "Invalid total_positions: {}",
+                        row.total_positions
+                    ))
+                })?;
+                Ok(StoredReportListItem {
+                    id: row.id,
+                    account_name: row.account_name,
+                    statement_period: row.statement_period,
+                    created_at: row.created_at,
+                    total_positions,
+                })
+            })
+            .collect()
+    }
+
+    pub async fn delete_by_id(pool: &SqlitePool, id: i64) -> Result<bool, DbError> {
+        let result = sqlx::query!(
+            r#"
+                DELETE FROM portfolio_summaries WHERE id = ?;
+            "#,
+            id
+        )
+        .execute(pool)
+        .await
+        .map_err(DbError::Query)?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn delete_all(pool: &SqlitePool) -> Result<u64, DbError> {
+        let result = sqlx::query!(
+            r#"
+               DELETE FROM portfolio_summaries;
+            "#
+        )
+        .execute(pool)
+        .await
+        .map_err(DbError::Query)?;
+
+        Ok(result.rows_affected())
+    }
 }
 
 fn parse_decimal(value: &str, field: &'static str) -> Result<Decimal, DbError> {
@@ -447,5 +512,264 @@ mod tests {
             .expect("database query should succeed");
 
         assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn list_returns_empty_for_empty_database() {
+        let pool = setup_test_db().await;
+
+        let reports = PortfolioSummaryRepository::list(&pool)
+            .await
+            .expect("list reports");
+
+        assert!(reports.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_returns_metadata_in_reverse_import_order() {
+        let pool = setup_test_db().await;
+        let first = sample_portfolio_summary();
+        let first_id = insert_summary(&pool, &first).await;
+
+        let mut second = sample_portfolio_summary();
+        second.account_info.name = Some("Second Account".to_string());
+        second.statement.period = Some("2026-05-01".to_string());
+        let mut additional_position = second.positions[0].clone();
+        additional_position.symbol = "VTI".to_string();
+        second.positions.push(additional_position);
+        second.totals.total_positions = second.positions.len();
+        let second_id = insert_summary(&pool, &second).await;
+
+        let first_created_at = "2026-06-03T10:00:00Z";
+        let second_created_at = "2026-06-02T10:00:00Z";
+        for (id, created_at) in [(first_id, first_created_at), (second_id, second_created_at)] {
+            sqlx::query("UPDATE portfolio_summaries SET created_at = ? WHERE id = ?")
+                .bind(created_at)
+                .bind(id)
+                .execute(&pool)
+                .await
+                .expect("set deterministic import timestamp");
+        }
+
+        let reports = PortfolioSummaryRepository::list(&pool)
+            .await
+            .expect("list reports");
+        let expected = [
+            (second_id, &second, second_created_at),
+            (first_id, &first, first_created_at),
+        ];
+
+        assert_eq!(reports.len(), expected.len());
+        for (report, (id, summary, created_at)) in reports.iter().zip(expected) {
+            assert_eq!(report.id, id);
+            assert_eq!(report.account_name, summary.account_info.name);
+            assert_eq!(report.statement_period, summary.statement.period);
+            assert_eq!(report.created_at, created_at);
+            assert_eq!(report.total_positions, summary.totals.total_positions);
+        }
+    }
+
+    #[tokio::test]
+    async fn list_preserves_missing_account_name_and_statement_period() {
+        let pool = setup_test_db().await;
+        let mut summary = sample_portfolio_summary();
+        summary.account_info.name = None;
+        summary.statement.period = None;
+        let id = insert_summary(&pool, &summary).await;
+
+        let reports = PortfolioSummaryRepository::list(&pool)
+            .await
+            .expect("list reports with missing metadata");
+
+        assert_eq!(reports.len(), 1);
+        assert_eq!(reports[0].id, id);
+        assert!(reports[0].account_name.is_none());
+        assert!(reports[0].statement_period.is_none());
+    }
+
+    #[tokio::test]
+    async fn list_accepts_zero_total_positions() {
+        let pool = setup_test_db().await;
+        let mut summary = sample_portfolio_summary();
+        summary.positions.clear();
+        summary.totals.total_positions = 0;
+        let id = insert_summary(&pool, &summary).await;
+
+        let reports = PortfolioSummaryRepository::list(&pool)
+            .await
+            .expect("list reports without positions");
+
+        assert_eq!(reports.len(), 1);
+        assert_eq!(reports[0].id, id);
+        assert_eq!(reports[0].total_positions, 0);
+    }
+
+    #[tokio::test]
+    async fn list_rejects_negative_total_positions() {
+        let pool = setup_test_db().await;
+        let summary = sample_portfolio_summary();
+        let id = insert_summary(&pool, &summary).await;
+        sqlx::query("UPDATE portfolio_summaries SET total_positions = -1 WHERE id = ?")
+            .bind(id)
+            .execute(&pool)
+            .await
+            .expect("store invalid position count");
+
+        let error = PortfolioSummaryRepository::list(&pool)
+            .await
+            .expect_err("negative position counts must be rejected");
+
+        assert!(matches!(error, DbError::InvalidData(_)));
+    }
+
+    #[tokio::test]
+    async fn delete_by_id_removes_report_and_positions_but_preserves_other_reports() {
+        let pool = setup_test_db().await;
+        let summary = sample_portfolio_summary();
+        let remaining_id = insert_summary(&pool, &summary).await;
+        let deleted_id = insert_summary(&pool, &summary).await;
+
+        let is_deleted = PortfolioSummaryRepository::delete_by_id(&pool, deleted_id)
+            .await
+            .expect("delete report");
+        assert!(is_deleted);
+
+        let deleted = PortfolioSummaryRepository::find_by_id(&pool, deleted_id)
+            .await
+            .expect("look up deleted report");
+        assert!(deleted.is_none());
+
+        let deleted_position_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM portfolio_positions WHERE summary_id = ?",
+        )
+        .bind(deleted_id)
+        .fetch_one(&pool)
+        .await
+        .expect("count positions of deleted report");
+        assert_eq!(deleted_position_count, 0);
+
+        let remaining = PortfolioSummaryRepository::find_by_id(&pool, remaining_id)
+            .await
+            .expect("look up remaining report")
+            .expect("other report must remain");
+        assert_eq!(remaining.account_info.name, summary.account_info.name);
+        assert_eq!(remaining.positions.len(), summary.positions.len());
+        assert_eq!(remaining.positions[0].symbol, summary.positions[0].symbol);
+
+        let latest = PortfolioSummaryRepository::find_latest(&pool)
+            .await
+            .expect("find latest after deleting newest report")
+            .expect("remaining report must become latest");
+        assert_eq!(latest.id, remaining_id);
+    }
+
+    #[tokio::test]
+    async fn delete_by_id_returns_false_for_missing_report() {
+        let pool = setup_test_db().await;
+        let summary = sample_portfolio_summary();
+        let id = insert_summary(&pool, &summary).await;
+
+        let is_deleted = PortfolioSummaryRepository::delete_by_id(&pool, id + 1)
+            .await
+            .expect("delete missing report");
+
+        assert!(!is_deleted);
+        let remaining = PortfolioSummaryRepository::find_by_id(&pool, id)
+            .await
+            .expect("look up existing report")
+            .expect("existing report must remain");
+        assert_eq!(remaining.positions.len(), summary.positions.len());
+    }
+
+    #[tokio::test]
+    async fn delete_by_id_returns_false_when_report_is_already_deleted() {
+        let pool = setup_test_db().await;
+        let summary = sample_portfolio_summary();
+        let id = insert_summary(&pool, &summary).await;
+
+        assert!(PortfolioSummaryRepository::delete_by_id(&pool, id)
+            .await
+            .expect("delete existing report"));
+        assert!(!PortfolioSummaryRepository::delete_by_id(&pool, id)
+            .await
+            .expect("delete report again"));
+    }
+
+    #[tokio::test]
+    async fn delete_all_removes_reports_and_positions_and_returns_report_count() {
+        let pool = setup_test_db().await;
+        let first = sample_portfolio_summary();
+        insert_summary(&pool, &first).await;
+
+        let mut second = sample_portfolio_summary();
+        let mut additional_position = second.positions[0].clone();
+        additional_position.symbol = "VTI".to_string();
+        second.positions.push(additional_position);
+        second.totals.total_positions = second.positions.len();
+        insert_summary(&pool, &second).await;
+
+        let deleted_count = PortfolioSummaryRepository::delete_all(&pool)
+            .await
+            .expect("delete all reports");
+
+        assert_eq!(deleted_count, 2);
+        let report_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM portfolio_summaries")
+            .fetch_one(&pool)
+            .await
+            .expect("count remaining reports");
+        let position_count =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM portfolio_positions")
+                .fetch_one(&pool)
+                .await
+                .expect("count remaining positions");
+        assert_eq!(report_count, 0);
+        assert_eq!(position_count, 0);
+        assert!(PortfolioSummaryRepository::find_latest(&pool)
+            .await
+            .expect("find latest after clearing reports")
+            .is_none());
+        assert_eq!(
+            PortfolioSummaryRepository::delete_all(&pool)
+                .await
+                .expect("clear reports again"),
+            0,
+        );
+    }
+
+    #[tokio::test]
+    async fn delete_all_returns_zero_for_empty_database() {
+        let pool = setup_test_db().await;
+
+        let deleted_count = PortfolioSummaryRepository::delete_all(&pool)
+            .await
+            .expect("clear empty database");
+
+        assert_eq!(deleted_count, 0);
+    }
+
+    #[tokio::test]
+    async fn insert_after_delete_all_preserves_schema_and_keeps_ids_increasing() {
+        let pool = setup_test_db().await;
+        let summary = sample_portfolio_summary();
+        let original_id = insert_summary(&pool, &summary).await;
+        PortfolioSummaryRepository::delete_all(&pool)
+            .await
+            .expect("clear reports before reimport");
+
+        let new_id = insert_summary(&pool, &summary).await;
+        let reimported = PortfolioSummaryRepository::find_by_id(&pool, new_id)
+            .await
+            .expect("load reimported report")
+            .expect("reimported report must exist");
+
+        assert!(new_id > original_id);
+        assert_eq!(reimported.account_info.name, summary.account_info.name);
+        assert_eq!(reimported.totals.market_value, summary.totals.market_value);
+        assert_eq!(reimported.positions.len(), summary.positions.len());
+        assert_eq!(reimported.positions[0].symbol, summary.positions[0].symbol);
+        assert!(PortfolioSummaryRepository::find_by_id(&pool, original_id)
+            .await
+            .expect("look up report removed before reimport")
+            .is_none());
     }
 }

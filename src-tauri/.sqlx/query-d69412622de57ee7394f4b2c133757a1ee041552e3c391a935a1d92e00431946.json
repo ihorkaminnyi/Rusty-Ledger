@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT\n                    id,\n                    account_name,\n                    statement_period,\n                    created_at,\n                    total_positions\n                FROM portfolio_summaries\n                ORDER BY id DESC;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "account_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "statement_period",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_positions",
+        "ordinal": 4,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "d69412622de57ee7394f4b2c133757a1ee041552e3c391a935a1d92e00431946"
+}

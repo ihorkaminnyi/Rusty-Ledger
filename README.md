@@ -6,6 +6,17 @@ Rusty Ledger is a privacy-first desktop app for portfolio analysis, built with T
 - Explore an asset allocation pie chart with auto-grouped minor holdings.
 - Browse a sortable PrimeVue table of positions with allocation, ROI, and market value.
 - Configure target allocations and generate a suggested buy/sell plan for rebalancing.
+- Reopen saved reports, delete individual reports, or clear all saved reports.
+
+The latest imported report opens automatically when you start the app. **Open latest report**
+is also available on the welcome screen and in the portfolio header. **Saved reports** opens
+the full history, where you can open any report or delete it after confirmation. Deleting
+the report currently on screen closes its portfolio; deleting another report keeps your
+current portfolio open. Clearing all reports also closes the current portfolio.
+
+Rebalancing uses the saved portfolio, so you can calculate a plan after restarting the app
+without the original CSV. Opening a different report or using **Open latest report** resets
+the rebalancing settings and results.
 
 ## Screenshots
 
@@ -28,7 +39,9 @@ Rusty Ledger currently supports account statements from Interactive Brokers, the
 
 - All data is processed locally on your computer.
 - No network requests are made while your data is being processed.
-- Data is cleared automatically when you close the app.
+- Reports are saved in a local SQLite database and remain after you close the app.
+- Delete individual reports or clear all reports from **Saved reports**. Their positions
+  are deleted too; original CSV files stay on disk.
 - The project is open source, ensuring full transparency.
 
 ## Technology Stack
@@ -46,6 +59,8 @@ Rusty Ledger currently supports account statements from Interactive Brokers, the
 
 - Run `npm run dev` to start the Vite dev server alongside the Tauri shell.
 - Run `npm run build` for a production-ready frontend build.
+- Run `npm test` for frontend report-management and rebalancing tests.
+- Run `SQLX_OFFLINE=true cargo test --offline --lib` from `src-tauri/` for backend tests.
 - Run `npm run tauri build` to produce a packaged desktop application.
 
 ## SQLx Offline Cache Workflow
